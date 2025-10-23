@@ -379,3 +379,4 @@ error_log( print_r( $variavel, true ) );
 **Desenvolvido por David William da Costa**  
 GitHub: [@agenciadw](https://github.com/agenciadw/dw-whatsapp)
 
+

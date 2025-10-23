@@ -50,8 +50,10 @@ class DW_WhatsApp {
 	 */
 	private function load_dependencies() {
 		require_once DW_WHATSAPP_PATH . 'includes/class-dw-whatsapp-settings.php';
+		require_once DW_WHATSAPP_PATH . 'includes/class-dw-whatsapp-schedule.php';
 		require_once DW_WHATSAPP_PATH . 'includes/class-dw-whatsapp-frontend.php';
 		require_once DW_WHATSAPP_PATH . 'admin/class-dw-whatsapp-admin.php';
+		require_once DW_WHATSAPP_PATH . 'admin/class-dw-whatsapp-product.php';
 	}
 
 	/**
@@ -68,6 +70,7 @@ class DW_WhatsApp {
 			
 			if ( is_admin() ) {
 				DW_WhatsApp_Admin::instance();
+				DW_WhatsApp_Product::instance();
 			}
 		}
 	}
@@ -117,4 +120,5 @@ class DW_WhatsApp {
 		}
 	}
 }
+
 

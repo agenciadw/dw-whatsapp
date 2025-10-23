@@ -2,8 +2,8 @@
 /**
  * Plugin Name: DW WhatsApp para WooCommerce
  * Plugin URI: https://github.com/agenciadw/dw-whatsapp
- * Description: Adiciona botões de WhatsApp ao WooCommerce com suporte a variações de produtos, botão flutuante e orçamentos para produtos sem preço.
- * Version: 0.1.0
+ * Description: Adiciona botões de WhatsApp ao WooCommerce com múltiplos atendentes, horário automático, atribuição por produto e interface drag & drop.
+ * Version: 0.2.0
  * Author: David William da Costa
  * Author URI: https://github.com/agenciadw
  * Text Domain: dw-whatsapp
@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'DW_WHATSAPP_VERSION', '0.1.0' );
+define( 'DW_WHATSAPP_VERSION', '0.2.0' );
 define( 'DW_WHATSAPP_FILE', __FILE__ );
 define( 'DW_WHATSAPP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DW_WHATSAPP_URL', plugin_dir_url( __FILE__ ) );
@@ -77,6 +77,11 @@ function dw_whatsapp_activate() {
 		'include_product_link'       => 'yes',
 		'include_variations'         => 'yes',
 		'button_color'               => '#25d366',
+		'multi_users_enabled'        => 'no',
+		'multi_users'                => array(),
+		'chat_widget_title'          => 'Iniciar Conversa',
+		'chat_widget_subtitle'       => 'Olá! Clique em um dos nossos membros abaixo para conversar no WhatsApp ;)',
+		'chat_widget_availability'   => 'A equipe normalmente responde em alguns minutos.',
 	);
 
 	add_option( 'dw_whatsapp_settings', $default_options );

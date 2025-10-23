@@ -1,0 +1,43 @@
+/**
+ * DW WhatsApp - Frontend Styles
+ */
+
+/* Seletor de atendente */
+.dw-select-attendant {
+    transition: all 0.3s ease;
+}
+
+.dw-select-attendant:hover {
+    border-color: #25d366;
+}
+
+.dw-select-attendant:focus {
+    outline: none;
+    border-color: #25d366;
+    box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.1);
+}
+
+/* Animação no botão ao mudar atendente */
+@keyframes dwPulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.02);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.dw-whatsapp-button.updating {
+    animation: dwPulse 0.3s ease;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .dw-select-attendant {
+        font-size: 16px !important; /* Evita zoom no iOS */
+    }
+}
+

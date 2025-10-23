@@ -58,11 +58,8 @@ class DW_WhatsApp_Admin {
 	 * Register settings
 	 */
 	public function register_settings() {
-		register_setting(
-			'dw_whatsapp_settings_group',
-			'dw_whatsapp_settings',
-			array( 'DW_WhatsApp_Settings', 'update' )
-		);
+		// Não registrar callback para evitar loop infinito
+		// O salvamento é feito manualmente no render_settings_page
 	}
 
 	/**
@@ -95,11 +92,34 @@ class DW_WhatsApp_Admin {
 
 		if ( isset( $_POST['dw_whatsapp_settings_submit'] ) ) {
 			check_admin_referer( 'dw_whatsapp_settings_action', 'dw_whatsapp_settings_nonce' );
-			DW_WhatsApp_Settings::update( $_POST['dw_whatsapp_settings'] );
-			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Configurações salvas com sucesso!', 'dw-whatsapp' ) . '</p></div>';
+			
+			// Verificar se os dados foram enviados
+			if ( isset( $_POST['dw_whatsapp_settings'] ) && is_array( $_POST['dw_whatsapp_settings'] ) ) {
+				// Limitar o número de usuários para evitar problemas de performance
+				if ( isset( $_POST['dw_whatsapp_settings']['multi_users'] ) && is_array( $_POST['dw_whatsapp_settings']['multi_users'] ) ) {
+					// Limitar a 10 usuários para evitar problemas
+					$_POST['dw_whatsapp_settings']['multi_users'] = array_slice( $_POST['dw_whatsapp_settings']['multi_users'], 0, 10 );
+				}
+				
+				// Tentar salvar com tratamento de erro
+				try {
+					$result = DW_WhatsApp_Settings::update( $_POST['dw_whatsapp_settings'] );
+					
+					if ( $result ) {
+						echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Configurações salvas com sucesso!', 'dw-whatsapp' ) . '</p></div>';
+					} else {
+						echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__( 'Erro ao salvar configurações. Tente novamente.', 'dw-whatsapp' ) . '</p></div>';
+					}
+				} catch ( Exception $e ) {
+					echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__( 'Erro crítico: ', 'dw-whatsapp' ) . esc_html( $e->getMessage() ) . '</p></div>';
+				}
+			} else {
+				echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__( 'Dados inválidos recebidos.', 'dw-whatsapp' ) . '</p></div>';
+			}
 		}
 
 		require_once DW_WHATSAPP_PATH . 'admin/views/settings-page.php';
 	}
 }
+
 
