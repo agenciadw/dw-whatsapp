@@ -156,7 +156,7 @@ GPL v2 ou posterior - https://www.gnu.org/licenses/gpl-2.0.html
 
 ## 🔄 Changelog
 
-### Versão 1.0.0 - 2024-12-19
+### Versão 1.0.0 - 28-10-2025
 - 🎉 **Lançamento inicial** com funcionalidades completas
 - ✨ **Sistema de posicionamento avançado** com ajuste fino
 - 🎭 **Dois estilos de botão** (retangular e circular)
