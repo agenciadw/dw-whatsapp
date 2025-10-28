@@ -41,6 +41,24 @@ class DW_WhatsApp_Frontend {
 	 * Initialize hooks
 	 */
 	private function init_hooks() {
+		// Floating button - sempre funciona (com ou sem WooCommerce)
+		if ( DW_WhatsApp_Settings::get( 'show_floating_button' ) === 'yes' ) {
+			add_action( 'wp_footer', array( $this, 'render_floating_button' ) );
+		}
+
+		// Scripts - sempre carregar CSS
+		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
+
+		// Hooks específicos do WooCommerce (só funcionam se WooCommerce estiver ativo)
+		if ( $this->is_woocommerce_active() ) {
+			$this->init_woocommerce_hooks();
+		}
+	}
+
+	/**
+	 * Initialize WooCommerce specific hooks
+	 */
+	private function init_woocommerce_hooks() {
 		// Product page
 		if ( DW_WhatsApp_Settings::get( 'show_on_product_page' ) === 'yes' ) {
 			add_action( 'woocommerce_single_product_summary', array( $this, 'render_product_button' ), 999 );
@@ -51,26 +69,27 @@ class DW_WhatsApp_Frontend {
 			add_filter( 'woocommerce_loop_add_to_cart_link', array( $this, 'render_loop_button' ), 999, 2 );
 		}
 
-		// Floating button
-		if ( DW_WhatsApp_Settings::get( 'show_floating_button' ) === 'yes' ) {
-			add_action( 'wp_footer', array( $this, 'render_floating_button' ) );
-		}
-
 		// Product hooks
 		add_filter( 'woocommerce_is_purchasable', array( $this, 'set_unpurchasable_if_no_price' ), 1000, 2 );
 		add_filter( 'woocommerce_get_price_html', array( $this, 'modify_price_html' ), 1000, 2 );
 		add_filter( 'woocommerce_variable_sale_price_html', array( $this, 'modify_price_html' ), 1000, 2 );
 		add_filter( 'woocommerce_variable_price_html', array( $this, 'modify_price_html' ), 1000, 2 );
+	}
 
-		// Scripts
-		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
+	/**
+	 * Check if WooCommerce is active
+	 *
+	 * @return bool
+	 */
+	private function is_woocommerce_active() {
+		return class_exists( 'WooCommerce' );
 	}
 
 	/**
 	 * Enqueue scripts
 	 */
 	public function enqueue_scripts() {
-		// Enqueue CSS
+		// Enqueue CSS - sempre carregar
 		wp_enqueue_style(
 			'dw-whatsapp-frontend',
 			DW_WHATSAPP_URL . 'assets/css/frontend.css',
@@ -78,25 +97,23 @@ class DW_WhatsApp_Frontend {
 			DW_WHATSAPP_VERSION
 		);
 
-		// Enqueue JS apenas em páginas de produto
-		if ( ! is_product() || DW_WhatsApp_Settings::get( 'include_variations' ) !== 'yes' ) {
-			return;
+		// Enqueue JS apenas em páginas de produto do WooCommerce (se WooCommerce estiver ativo)
+		if ( $this->is_woocommerce_active() && is_product() && DW_WhatsApp_Settings::get( 'include_variations' ) === 'yes' ) {
+			wp_enqueue_script(
+				'dw-whatsapp-variations',
+				DW_WHATSAPP_URL . 'assets/js/variations.js',
+				array( 'jquery' ),
+				DW_WHATSAPP_VERSION,
+				true
+			);
+
+			wp_localize_script( 'dw-whatsapp-variations', 'dwWhatsApp', array(
+				'phone'                   => preg_replace( '/[^0-9]/', '', DW_WhatsApp_Settings::get( 'phone_number' ) ),
+				'messageTemplate'         => DW_WhatsApp_Settings::get( 'message_with_price' ),
+				'messageTemplateNoPrice'  => DW_WhatsApp_Settings::get( 'message_without_price' ),
+				'includeLink'             => DW_WhatsApp_Settings::get( 'include_product_link' ) === 'yes',
+			) );
 		}
-
-		wp_enqueue_script(
-			'dw-whatsapp-variations',
-			DW_WHATSAPP_URL . 'assets/js/variations.js',
-			array( 'jquery' ),
-			DW_WHATSAPP_VERSION,
-			true
-		);
-
-		wp_localize_script( 'dw-whatsapp-variations', 'dwWhatsApp', array(
-			'phone'                   => preg_replace( '/[^0-9]/', '', DW_WhatsApp_Settings::get( 'phone_number' ) ),
-			'messageTemplate'         => DW_WhatsApp_Settings::get( 'message_with_price' ),
-			'messageTemplateNoPrice'  => DW_WhatsApp_Settings::get( 'message_without_price' ),
-			'includeLink'             => DW_WhatsApp_Settings::get( 'include_product_link' ) === 'yes',
-		) );
 	}
 
 	/**
@@ -250,59 +267,136 @@ class DW_WhatsApp_Frontend {
 		$phone = preg_replace( '/[^0-9]/', '', DW_WhatsApp_Settings::get( 'phone_number' ) );
 		$text = DW_WhatsApp_Settings::get( 'floating_button_text', 'Fale Conosco' );
 		$message = DW_WhatsApp_Settings::get( 'floating_button_message', 'Olá! Vim pelo site e gostaria de mais informações.' );
-		$position = DW_WhatsApp_Settings::get( 'floating_button_position', 'bottom-right' );
+		
+		// Configurações separadas para desktop e mobile
+		$position_desktop = DW_WhatsApp_Settings::get( 'floating_button_position_desktop', 'bottom-right' );
+		$position_mobile = DW_WhatsApp_Settings::get( 'floating_button_position_mobile', 'bottom-right' );
+		$offset_x_desktop = intval( DW_WhatsApp_Settings::get( 'floating_button_offset_x_desktop', '0' ) );
+		$offset_y_desktop = intval( DW_WhatsApp_Settings::get( 'floating_button_offset_y_desktop', '0' ) );
+		$offset_x_mobile = intval( DW_WhatsApp_Settings::get( 'floating_button_offset_x_mobile', '0' ) );
+		$offset_y_mobile = intval( DW_WhatsApp_Settings::get( 'floating_button_offset_y_mobile', '0' ) );
+		
+		$style = DW_WhatsApp_Settings::get( 'floating_button_style', 'rectangular' );
+		$size = DW_WhatsApp_Settings::get( 'floating_button_size', 'medium' );
 		$color = esc_attr( DW_WhatsApp_Settings::get( 'button_color', '#25d366' ) );
 
 		$link = 'https://wa.me/' . $phone . '?text=' . rawurlencode( $message );
 
-		$positions = array(
-			'bottom-right' => 'bottom: 20px; right: 20px;',
-			'bottom-left'  => 'bottom: 20px; left: 20px;',
-			'top-right'    => 'top: 80px; right: 20px;',
-			'top-left'     => 'top: 80px; left: 20px;',
+		// Posições para desktop
+		$positions_desktop = array(
+			'bottom-right' => 'bottom: ' . (20 + $offset_y_desktop) . 'px; right: ' . (20 + $offset_x_desktop) . 'px;',
+			'bottom-left'  => 'bottom: ' . (20 + $offset_y_desktop) . 'px; left: ' . (20 + $offset_x_desktop) . 'px;',
+			'top-right'    => 'top: ' . (80 + $offset_y_desktop) . 'px; right: ' . (20 + $offset_x_desktop) . 'px;',
+			'top-left'     => 'top: ' . (80 + $offset_y_desktop) . 'px; left: ' . (20 + $offset_x_desktop) . 'px;',
 		);
 
-		$style = isset( $positions[ $position ] ) ? $positions[ $position ] : $positions['bottom-right'];
+		// Posições para mobile
+		$positions_mobile = array(
+			'bottom-right' => 'bottom: ' . (15 + $offset_y_mobile) . 'px; right: ' . (15 + $offset_x_mobile) . 'px;',
+			'bottom-left'  => 'bottom: ' . (15 + $offset_y_mobile) . 'px; left: ' . (15 + $offset_x_mobile) . 'px;',
+			'top-right'    => 'top: ' . (70 + $offset_y_mobile) . 'px; right: ' . (15 + $offset_x_mobile) . 'px;',
+			'top-left'     => 'top: ' . (70 + $offset_y_mobile) . 'px; left: ' . (15 + $offset_x_mobile) . 'px;',
+		);
 
-		echo '<div id="dw-whatsapp-floating" style="position: fixed; ' . esc_attr( $style ) . ' z-index: 99999;">';
-		echo '<a href="' . esc_url( $link ) . '" target="_blank" class="dw-whatsapp-floating-button" style="display: flex; align-items: center; gap: 10px; background-color: ' . $color . '; color: white; padding: 12px 20px; border-radius: 50px; text-decoration: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease; font-weight: 500;">';
-		echo $this->get_whatsapp_icon( '24px' );
-		echo '<span class="dw-floating-text" style="font-size: 14px;">' . esc_html( $text ) . '</span>';
-		echo '</a></div>';
+		$position_style_desktop = isset( $positions_desktop[ $position_desktop ] ) ? $positions_desktop[ $position_desktop ] : $positions_desktop['bottom-right'];
+		$position_style_mobile = isset( $positions_mobile[ $position_mobile ] ) ? $positions_mobile[ $position_mobile ] : $positions_mobile['bottom-right'];
 
-		$this->render_floating_button_styles( $position );
+		// Tamanhos
+		$sizes = array(
+			'small' => array( 'padding' => '8px 12px', 'font-size' => '12px', 'icon-size' => '18px' ),
+			'medium' => array( 'padding' => '12px 20px', 'font-size' => '14px', 'icon-size' => '24px' ),
+			'large' => array( 'padding' => '16px 24px', 'font-size' => '16px', 'icon-size' => '28px' ),
+		);
+
+		$size_config = isset( $sizes[ $size ] ) ? $sizes[ $size ] : $sizes['medium'];
+
+		echo '<div id="dw-whatsapp-floating" class="dw-whatsapp-floating-container" style="position: fixed; ' . esc_attr( $position_style_desktop ) . ' z-index: 99999;">';
+		
+		if ( $style === 'circular' ) {
+			// Estilo circular com hover
+			echo '<div class="dw-whatsapp-circular-container">';
+			echo '<a href="' . esc_url( $link ) . '" target="_blank" class="dw-whatsapp-floating-button dw-circular" style="display: flex; align-items: center; justify-content: center; background-color: ' . $color . '; color: white; padding: ' . $size_config['padding'] . '; border-radius: 50%; text-decoration: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease; font-weight: 500; width: 60px; height: 60px;">';
+			echo $this->get_whatsapp_icon( $size_config['icon-size'] );
+			echo '</a>';
+			echo '<div class="dw-whatsapp-tooltip" style="position: absolute; background: rgba(0,0,0,0.8); color: white; padding: 8px 12px; border-radius: 6px; font-size: ' . $size_config['font-size'] . '; white-space: nowrap; opacity: 0; visibility: hidden; transition: all 0.3s ease; pointer-events: none;">';
+			echo esc_html( $text );
+			echo '</div>';
+			echo '</div>';
+		} else {
+			// Estilo retangular (atual)
+			echo '<a href="' . esc_url( $link ) . '" target="_blank" class="dw-whatsapp-floating-button dw-rectangular" style="display: flex; align-items: center; gap: 10px; background-color: ' . $color . '; color: white; padding: ' . $size_config['padding'] . '; border-radius: 50px; text-decoration: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease; font-weight: 500;">';
+			echo $this->get_whatsapp_icon( $size_config['icon-size'] );
+			echo '<span class="dw-floating-text" style="font-size: ' . $size_config['font-size'] . ';">' . esc_html( $text ) . '</span>';
+			echo '</a>';
+		}
+		
+		echo '</div>';
+
+		$this->render_floating_button_styles( $position_desktop, $position_mobile, $style, $size );
 	}
 
 	/**
 	 * Render multi users widget
 	 */
 	private function render_multi_users_widget() {
-		$position = DW_WhatsApp_Settings::get( 'floating_button_position', 'bottom-right' );
+		// Configurações separadas para desktop e mobile
+		$position_desktop = DW_WhatsApp_Settings::get( 'floating_button_position_desktop', 'bottom-right' );
+		$position_mobile = DW_WhatsApp_Settings::get( 'floating_button_position_mobile', 'bottom-right' );
+		$offset_x_desktop = intval( DW_WhatsApp_Settings::get( 'floating_button_offset_x_desktop', '0' ) );
+		$offset_y_desktop = intval( DW_WhatsApp_Settings::get( 'floating_button_offset_y_desktop', '0' ) );
+		$offset_x_mobile = intval( DW_WhatsApp_Settings::get( 'floating_button_offset_x_mobile', '0' ) );
+		$offset_y_mobile = intval( DW_WhatsApp_Settings::get( 'floating_button_offset_y_mobile', '0' ) );
+		
+		$style = DW_WhatsApp_Settings::get( 'floating_button_style', 'rectangular' );
+		$size = DW_WhatsApp_Settings::get( 'floating_button_size', 'medium' );
 		$color = esc_attr( DW_WhatsApp_Settings::get( 'button_color', '#25d366' ) );
 		$users = DW_WhatsApp_Settings::get( 'multi_users', array() );
 		$title = DW_WhatsApp_Settings::get( 'chat_widget_title', 'Iniciar Conversa' );
 		$subtitle = DW_WhatsApp_Settings::get( 'chat_widget_subtitle', 'Olá! Clique em um dos nossos membros abaixo para conversar no WhatsApp ;)' );
 		$availability = DW_WhatsApp_Settings::get( 'chat_widget_availability', 'A equipe normalmente responde em alguns minutos.' );
 
-		$positions = array(
-			'bottom-right' => 'bottom: 20px; right: 20px;',
-			'bottom-left'  => 'bottom: 20px; left: 20px;',
-			'top-right'    => 'top: 80px; right: 20px;',
-			'top-left'     => 'top: 80px; left: 20px;',
+		// Posições para desktop
+		$positions_desktop = array(
+			'bottom-right' => 'bottom: ' . (20 + $offset_y_desktop) . 'px; right: ' . (20 + $offset_x_desktop) . 'px;',
+			'bottom-left'  => 'bottom: ' . (20 + $offset_y_desktop) . 'px; left: ' . (20 + $offset_x_desktop) . 'px;',
+			'top-right'    => 'top: ' . (80 + $offset_y_desktop) . 'px; right: ' . (20 + $offset_x_desktop) . 'px;',
+			'top-left'     => 'top: ' . (80 + $offset_y_desktop) . 'px; left: ' . (20 + $offset_x_desktop) . 'px;',
 		);
 
-		$style = isset( $positions[ $position ] ) ? $positions[ $position ] : $positions['bottom-right'];
+		$position_style_desktop = isset( $positions_desktop[ $position_desktop ] ) ? $positions_desktop[ $position_desktop ] : $positions_desktop['bottom-right'];
 
-		echo '<div id="dw-whatsapp-floating" style="position: fixed; ' . esc_attr( $style ) . ' z-index: 99999;">';
+		// Tamanhos
+		$sizes = array(
+			'small' => array( 'padding' => '8px 12px', 'font-size' => '12px', 'icon-size' => '18px' ),
+			'medium' => array( 'padding' => '12px 20px', 'font-size' => '14px', 'icon-size' => '24px' ),
+			'large' => array( 'padding' => '16px 24px', 'font-size' => '16px', 'icon-size' => '28px' ),
+		);
+
+		$size_config = isset( $sizes[ $size ] ) ? $sizes[ $size ] : $sizes['medium'];
+
+		echo '<div id="dw-whatsapp-floating" class="dw-whatsapp-floating-container" style="position: fixed; ' . esc_attr( $position_style_desktop ) . ' z-index: 99999;">';
 		
-		// Floating button
-		echo '<div id="dw-whatsapp-trigger" class="dw-whatsapp-trigger" style="display: flex; align-items: center; gap: 10px; background-color: ' . $color . '; color: white; padding: 12px 20px; border-radius: 50px; text-decoration: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease; font-weight: 500; cursor: pointer;">';
-		echo $this->get_whatsapp_icon( '24px' );
-		echo '<span class="dw-floating-text" style="font-size: 14px;">' . esc_html( $title ) . '</span>';
-		echo '</div>';
+		if ( $style === 'circular' ) {
+			// Estilo circular com hover
+			echo '<div class="dw-whatsapp-circular-container">';
+			echo '<div id="dw-whatsapp-trigger" class="dw-whatsapp-trigger dw-circular" style="display: flex; align-items: center; justify-content: center; background-color: ' . $color . '; color: white; padding: ' . $size_config['padding'] . '; border-radius: 50%; text-decoration: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease; font-weight: 500; width: 60px; height: 60px; cursor: pointer;">';
+			echo $this->get_whatsapp_icon( $size_config['icon-size'] );
+			echo '</div>';
+			echo '<div class="dw-whatsapp-tooltip" style="position: absolute; background: rgba(0,0,0,0.8); color: white; padding: 8px 12px; border-radius: 6px; font-size: ' . $size_config['font-size'] . '; white-space: nowrap; opacity: 0; visibility: hidden; transition: all 0.3s ease; pointer-events: none;">';
+			echo esc_html( $title );
+			echo '</div>';
+			echo '</div>';
+		} else {
+			// Estilo retangular (atual)
+			echo '<div id="dw-whatsapp-trigger" class="dw-whatsapp-trigger dw-rectangular" style="display: flex; align-items: center; gap: 10px; background-color: ' . $color . '; color: white; padding: ' . $size_config['padding'] . '; border-radius: 50px; text-decoration: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease; font-weight: 500; cursor: pointer;">';
+			echo $this->get_whatsapp_icon( $size_config['icon-size'] );
+			echo '<span class="dw-floating-text" style="font-size: ' . $size_config['font-size'] . ';">' . esc_html( $title ) . '</span>';
+			echo '</div>';
+		}
 
-		// Chat widget
-		echo '<div id="dw-whatsapp-widget" class="dw-whatsapp-widget" style="display: none; position: absolute; bottom: 80px; right: 0; width: 320px; background: white; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); overflow: hidden; animation: dwSlideUp 0.3s ease;">';
+		// Chat widget - posicionamento dinâmico baseado na posição do botão
+		$widget_position = $this->get_widget_position( $position );
+		echo '<div id="dw-whatsapp-widget" class="dw-whatsapp-widget" style="display: none; position: absolute; ' . $widget_position . ' width: 320px; background: white; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); overflow: hidden; animation: dwSlideUp 0.3s ease;">';
 		
 		// Header
 		echo '<div class="dw-widget-header" style="background: ' . $color . '; color: white; padding: 20px; text-align: center;">';
@@ -333,30 +427,128 @@ class DW_WhatsApp_Frontend {
 		echo '</div>'; // End widget
 		echo '</div>'; // End floating
 
-		$this->render_multi_users_styles( $position );
+		$this->render_multi_users_styles( $position_desktop, $position_mobile );
 		$this->render_multi_users_scripts();
 	}
 
 	/**
 	 * Render floating button styles
 	 *
-	 * @param string $position Position.
+	 * @param string $position_desktop Desktop position.
+	 * @param string $position_mobile Mobile position.
+	 * @param string $style Style (rectangular or circular).
+	 * @param string $size Size (small, medium, large).
 	 */
-	private function render_floating_button_styles( $position ) {
+	private function render_floating_button_styles( $position_desktop, $position_mobile, $style = 'rectangular', $size = 'medium' ) {
 		?>
 		<style>
 			.dw-whatsapp-floating-button:hover {
 				transform: scale(1.05);
 				box-shadow: 0 6px 20px rgba(0,0,0,0.25) !important;
 			}
+
+			/* Estilo circular com tooltip */
+			.dw-whatsapp-circular-container {
+				position: relative;
+			}
+
+			.dw-whatsapp-circular-container:hover .dw-whatsapp-tooltip {
+				opacity: 1 !important;
+				visibility: visible !important;
+			}
+
+			/* Posicionamento do tooltip baseado na posição do botão (desktop) */
+			<?php if ( strpos( $position_desktop, 'right' ) !== false ) : ?>
+			/* Botão à direita - tooltip aparece à esquerda */
+			.dw-whatsapp-tooltip {
+				right: 70px;
+				top: 50%;
+				transform: translateY(-50%);
+			}
+			.dw-whatsapp-tooltip::after {
+				content: '';
+				position: absolute;
+				right: -5px;
+				top: 50%;
+				transform: translateY(-50%);
+				border: 5px solid transparent;
+				border-left-color: rgba(0,0,0,0.8);
+			}
+			<?php else : ?>
+			/* Botão à esquerda - tooltip aparece à direita */
+			.dw-whatsapp-tooltip {
+				left: 70px;
+				top: 50%;
+				transform: translateY(-50%);
+			}
+			.dw-whatsapp-tooltip::after {
+				content: '';
+				position: absolute;
+				left: -5px;
+				top: 50%;
+				transform: translateY(-50%);
+				border: 5px solid transparent;
+				border-right-color: rgba(0,0,0,0.8);
+			}
+			<?php endif; ?>
+
+			/* Responsividade - Posicionamento específico para mobile */
 			@media (max-width: 768px) {
 				#dw-whatsapp-floating {
-					<?php echo strpos( $position, 'right' ) !== false ? 'right: 15px !important;' : 'left: 15px !important;'; ?>
-					<?php echo strpos( $position, 'bottom' ) !== false ? 'bottom: 15px !important;' : 'top: 70px !important;'; ?>
+					/* Aplicar posição mobile com offsets */
+					<?php if ( strpos( $position_mobile, 'right' ) !== false ) : ?>
+						right: <?php echo (15 + $offset_x_mobile); ?>px !important;
+						left: auto !important;
+					<?php else : ?>
+						left: <?php echo (15 + $offset_x_mobile); ?>px !important;
+						right: auto !important;
+					<?php endif; ?>
+					
+					<?php if ( strpos( $position_mobile, 'bottom' ) !== false ) : ?>
+						bottom: <?php echo (15 + $offset_y_mobile); ?>px !important;
+						top: auto !important;
+					<?php else : ?>
+						top: <?php echo (70 + $offset_y_mobile); ?>px !important;
+						bottom: auto !important;
+					<?php endif; ?>
 				}
-				.dw-floating-text { display: none; }
-				.dw-whatsapp-floating-button { padding: 15px !important; border-radius: 50% !important; }
+				
+				/* Em mobile, sempre usar estilo circular */
+				.dw-whatsapp-floating-button {
+					padding: 15px !important;
+					border-radius: 50% !important;
+					width: 60px !important;
+					height: 60px !important;
+					justify-content: center !important;
+				}
+				
+				.dw-floating-text { 
+					display: none !important; 
+				}
+				
+				.dw-whatsapp-tooltip {
+					display: none !important;
+				}
 			}
+
+			/* Tamanhos específicos */
+			<?php if ( $size === 'small' ) : ?>
+			.dw-whatsapp-floating-button {
+				min-width: 50px;
+			}
+			.dw-circular {
+				width: 50px !important;
+				height: 50px !important;
+			}
+			<?php elseif ( $size === 'large' ) : ?>
+			.dw-whatsapp-floating-button {
+				min-width: 80px;
+			}
+			.dw-circular {
+				width: 70px !important;
+				height: 70px !important;
+			}
+			<?php endif; ?>
 		</style>
 		<?php
 	}
@@ -454,30 +646,32 @@ class DW_WhatsApp_Frontend {
 	 * @return string
 	 */
 	private function get_current_page_type() {
-		// WooCommerce
-		if ( is_cart() ) {
-			return 'cart';
-		}
-		if ( is_checkout() ) {
-			return 'checkout';
-		}
-		if ( is_account_page() ) {
-			return 'my-account';
-		}
-		if ( is_shop() ) {
-			return 'shop';
-		}
-		if ( is_product_category() ) {
-			return 'product-category';
-		}
-		if ( is_product_tag() ) {
-			return 'product-tag';
-		}
-		if ( is_product() ) {
-			return 'product';
+		// WooCommerce (só funciona se WooCommerce estiver ativo)
+		if ( $this->is_woocommerce_active() ) {
+			if ( is_cart() ) {
+				return 'cart';
+			}
+			if ( is_checkout() ) {
+				return 'checkout';
+			}
+			if ( is_account_page() ) {
+				return 'my-account';
+			}
+			if ( is_shop() ) {
+				return 'shop';
+			}
+			if ( is_product_category() ) {
+				return 'product-category';
+			}
+			if ( is_product_tag() ) {
+				return 'product-tag';
+			}
+			if ( is_product() ) {
+				return 'product';
+			}
 		}
 
-		// WordPress
+		// WordPress (sempre funciona)
 		if ( is_home() || is_front_page() ) {
 			return 'home';
 		}
@@ -582,15 +776,67 @@ class DW_WhatsApp_Frontend {
 	/**
 	 * Render multi users styles
 	 *
-	 * @param string $position Position.
+	 * @param string $position_desktop Desktop position.
+	 * @param string $position_mobile Mobile position.
 	 */
-	private function render_multi_users_styles( $position ) {
+	private function render_multi_users_styles( $position_desktop, $position_mobile ) {
+		$style = DW_WhatsApp_Settings::get( 'floating_button_style', 'rectangular' );
+		$size = DW_WhatsApp_Settings::get( 'floating_button_size', 'medium' );
+		
+		// Obter offsets para mobile
+		$offset_x_mobile = intval( DW_WhatsApp_Settings::get( 'floating_button_offset_x_mobile', '0' ) );
+		$offset_y_mobile = intval( DW_WhatsApp_Settings::get( 'floating_button_offset_y_mobile', '0' ) );
 		?>
 		<style>
 			.dw-whatsapp-trigger:hover {
 				transform: scale(1.05);
 				box-shadow: 0 6px 20px rgba(0,0,0,0.25) !important;
 			}
+
+			/* Estilo circular com tooltip para múltiplos usuários */
+			.dw-whatsapp-circular-container {
+				position: relative;
+			}
+
+			.dw-whatsapp-circular-container:hover .dw-whatsapp-tooltip {
+				opacity: 1 !important;
+				visibility: visible !important;
+			}
+
+			/* Posicionamento do tooltip baseado na posição do botão (desktop) */
+			<?php if ( strpos( $position_desktop, 'right' ) !== false ) : ?>
+			/* Botão à direita - tooltip aparece à esquerda */
+			.dw-whatsapp-tooltip {
+				right: 70px;
+				top: 50%;
+				transform: translateY(-50%);
+			}
+			.dw-whatsapp-tooltip::after {
+				content: '';
+				position: absolute;
+				right: -5px;
+				top: 50%;
+				transform: translateY(-50%);
+				border: 5px solid transparent;
+				border-left-color: rgba(0,0,0,0.8);
+			}
+			<?php else : ?>
+			/* Botão à esquerda - tooltip aparece à direita */
+			.dw-whatsapp-tooltip {
+				left: 70px;
+				top: 50%;
+				transform: translateY(-50%);
+			}
+			.dw-whatsapp-tooltip::after {
+				content: '';
+				position: absolute;
+				left: -5px;
+				top: 50%;
+				transform: translateY(-50%);
+				border: 5px solid transparent;
+				border-right-color: rgba(0,0,0,0.8);
+			}
+			<?php endif; ?>
 			
 			.dw-user-item:hover {
 				background-color: #f8f9fa !important;
@@ -611,24 +857,101 @@ class DW_WhatsApp_Frontend {
 				}
 			}
 			
+			/* Ponteiro da caixa de diálogo */
+			.dw-whatsapp-widget::before {
+				content: '';
+				position: absolute;
+				width: 0;
+				height: 0;
+				border-style: solid;
+			}
+			
+			/* Posicionamento do ponteiro baseado na posição do botão (desktop) */
+			<?php if ( strpos( $position_desktop, 'left' ) !== false ) : ?>
+			/* Botão à esquerda - ponteiro aponta da esquerda para a direita */
+			.dw-whatsapp-widget::before {
+				left: -10px;
+				top: 50%;
+				transform: translateY(-50%);
+				border-width: 10px 10px 10px 0;
+				border-color: transparent white transparent transparent;
+			}
+			<?php else : ?>
+			/* Botão à direita - ponteiro aponta da direita para a esquerda */
+			.dw-whatsapp-widget::before {
+				right: -10px;
+				top: 50%;
+				transform: translateY(-50%);
+				border-width: 10px 0 10px 10px;
+				border-color: transparent transparent transparent white;
+			}
+			<?php endif; ?>
+
+			/* Tamanhos específicos */
+			<?php if ( $size === 'small' ) : ?>
+			.dw-whatsapp-trigger {
+				min-width: 50px;
+			}
+			.dw-circular {
+				width: 50px !important;
+				height: 50px !important;
+			}
+			<?php elseif ( $size === 'large' ) : ?>
+			.dw-whatsapp-trigger {
+				min-width: 80px;
+			}
+			.dw-circular {
+				width: 70px !important;
+				height: 70px !important;
+			}
+			<?php endif; ?>
+			
+			/* Responsividade - Posicionamento específico para mobile */
 			@media (max-width: 768px) {
+				#dw-whatsapp-floating {
+					/* Aplicar posição mobile com offsets */
+					<?php if ( strpos( $position_mobile, 'right' ) !== false ) : ?>
+						right: <?php echo (15 + $offset_x_mobile); ?>px !important;
+						left: auto !important;
+					<?php else : ?>
+						left: <?php echo (15 + $offset_x_mobile); ?>px !important;
+						right: auto !important;
+					<?php endif; ?>
+					
+					<?php if ( strpos( $position_mobile, 'bottom' ) !== false ) : ?>
+						bottom: <?php echo (15 + $offset_y_mobile); ?>px !important;
+						top: auto !important;
+					<?php else : ?>
+						top: <?php echo (70 + $offset_y_mobile); ?>px !important;
+						bottom: auto !important;
+					<?php endif; ?>
+				}
+				
 				.dw-whatsapp-widget {
 					width: 280px !important;
+					<?php if ( strpos( $position_mobile, 'left' ) !== false ) : ?>
+					left: -10px !important;
+					right: auto !important;
+					<?php else : ?>
 					right: -10px !important;
+					left: auto !important;
+					<?php endif; ?>
 				}
 				
 				.dw-floating-text { 
 					display: none; 
 				}
 				
+				.dw-whatsapp-tooltip {
+					display: none !important;
+				}
+				
 				.dw-whatsapp-trigger { 
 					padding: 15px !important; 
 					border-radius: 50% !important; 
-				}
-				
-				#dw-whatsapp-floating {
-					<?php echo strpos( $position, 'right' ) !== false ? 'right: 15px !important;' : 'left: 15px !important;'; ?>
-					<?php echo strpos( $position, 'bottom' ) !== false ? 'bottom: 15px !important;' : 'top: 70px !important;'; ?>
+					width: 60px !important;
+					height: 60px !important;
+					justify-content: center !important;
 				}
 			}
 		</style>
@@ -681,6 +1004,23 @@ class DW_WhatsApp_Frontend {
 		});
 		</script>
 		<?php
+	}
+
+	/**
+	 * Get widget position based on button position
+	 *
+	 * @param string $position Button position.
+	 * @return string
+	 */
+	private function get_widget_position( $position ) {
+		$positions = array(
+			'bottom-right' => 'bottom: 80px; right: 0;',
+			'bottom-left'  => 'bottom: 80px; left: 0;',
+			'top-right'    => 'top: 80px; right: 0;',
+			'top-left'     => 'top: 80px; left: 0;',
+		);
+		
+		return isset( $positions[ $position ] ) ? $positions[ $position ] : $positions['bottom-right'];
 	}
 
 	/**

@@ -1,4 +1,4 @@
-# Estrutura do Plugin - DW WhatsApp v0.1.0
+# Estrutura do Plugin - DW WhatsApp v1.0.0
 
 Documentação da estrutura organizada do plugin seguindo clean code e padrões do WordPress.
 
@@ -7,29 +7,32 @@ Documentação da estrutura organizada do plugin seguindo clean code e padrões 
 ```
 dw-whatsapp/
 │
-├── 📄 dw-whatsapp.php                          # Bootstrap principal (100 linhas)
+├── 📄 dw-whatsapp.php                          # Bootstrap principal (60 linhas)
 ├── 📄 uninstall.php                            # Limpeza na desinstalação
 ├── 📄 README.md                                # Documentação do usuário
 ├── 📄 CHANGELOG.md                             # Histórico de versões
-├── 📄 .gitignore                               # Git ignore
+├── 📄 STRUCTURE.md                             # Esta documentação
 │
 ├── 📁 includes/                                # Classes principais
-│   ├── class-dw-whatsapp.php                   # Classe principal (130 linhas)
-│   ├── class-dw-whatsapp-settings.php          # Gerenciamento de configurações (180 linhas)
-│   └── class-dw-whatsapp-frontend.php          # Funcionalidades do frontend (320 linhas)
+│   ├── class-dw-whatsapp.php                   # Classe principal (150 linhas)
+│   ├── class-dw-whatsapp-settings.php          # Gerenciamento de configurações (220 linhas)
+│   ├── class-dw-whatsapp-frontend.php          # Funcionalidades do frontend (980 linhas)
+│   └── class-dw-whatsapp-schedule.php          # Sistema de horários (180 linhas)
 │
 ├── 📁 admin/                                   # Painel administrativo
-│   ├── class-dw-whatsapp-admin.php             # Classe admin (90 linhas)
+│   ├── class-dw-whatsapp-admin.php             # Classe admin (120 linhas)
+│   ├── class-dw-whatsapp-product.php            # Funcionalidades de produto (90 linhas)
 │   └── views/
-│       └── settings-page.php                   # Template da página de configurações (140 linhas)
+│       └── settings-page.php                   # Template da página de configurações (650 linhas)
 │
 └── 📁 assets/                                  # Assets do plugin
-    ├── css/                                    # Estilos (vazio - inline)
+    ├── css/
+    │   └── frontend.css                         # Estilos do frontend (50 linhas)
     └── js/
-        └── variations.js                       # JavaScript para variações (120 linhas)
+        └── variations.js                        # JavaScript para variações (120 linhas)
 ```
 
-**Total:** ~1.080 linhas de código organizado
+**Total:** ~2.620 linhas de código organizado
 
 ---
 
@@ -53,11 +56,10 @@ public static function instance() {
 }
 ```
 
-### Autoloading
-PSR-4 style autoloading implementado:
-```php
-spl_autoload_register( 'dw_whatsapp_autoload' );
-```
+### Carregamento Condicional
+- Funcionalidades WooCommerce carregam apenas se WooCommerce estiver ativo
+- Admin carrega apenas em área administrativa
+- Frontend sempre carrega para máxima compatibilidade
 
 ---
 
@@ -86,12 +88,19 @@ spl_autoload_register( 'dw_whatsapp_autoload' );
 - **Localização:** `includes/class-dw-whatsapp-frontend.php`
 - **Responsabilidade:** Botões e funcionalidades do site
 - **Métodos principais:**
-  - `render_product_button()` - Botão na página do produto
-  - `render_loop_button()` - Botão no loop
-  - `render_floating_button()` - Botão flutuante
-  - `generate_whatsapp_link()` - Gera link do WhatsApp
+  - `render_single_user_button()` - Botão usuário único
+  - `render_multi_users_widget()` - Widget múltiplos usuários
+  - `render_floating_button_styles()` - Estilos dinâmicos
+  - `get_widget_position()` - Posicionamento inteligente
   - `should_show_floating_button()` - Lógica de exibição
-  - `get_current_page_type()` - Detecta tipo de página
+
+### `DW_WhatsApp_Schedule` (Horários)
+- **Localização:** `includes/class-dw-whatsapp-schedule.php`
+- **Responsabilidade:** Sistema de horários automáticos
+- **Métodos principais:**
+  - `is_available($attendant)` - Verifica disponibilidade
+  - `get_formatted_hours($attendant)` - Formata horários
+  - `format_days_range($days, $days_full)` - Agrupa dias
 
 ### `DW_WhatsApp_Admin` (Admin)
 - **Localização:** `admin/class-dw-whatsapp-admin.php`
@@ -101,6 +110,43 @@ spl_autoload_register( 'dw_whatsapp_autoload' );
   - `register_settings()` - Registra configurações
   - `enqueue_scripts()` - Enfileira scripts admin
   - `render_settings_page()` - Renderiza página
+
+### `DW_WhatsApp_Product` (Produtos)
+- **Localização:** `admin/class-dw-whatsapp-product.php`
+- **Responsabilidade:** Funcionalidades específicas de produtos
+- **Métodos principais:**
+  - `render_product_button()` - Botão na página do produto
+  - `render_loop_button()` - Botão no loop
+  - `modify_price_html()` - Altera exibição de preços
+
+---
+
+## 🎨 Funcionalidades Avançadas
+
+### Sistema de Posicionamento
+- **4 posições básicas**: Inferior Direito, Inferior Esquerdo, Superior Direito, Superior Esquerdo
+- **Ajuste fino**: Offset horizontal e vertical (-100px a +100px)
+- **3 tamanhos**: Pequeno, Médio, Grande
+- **Posicionamento inteligente** do widget de chat
+
+### Dois Estilos de Botão
+- **Estilo Retangular**: Botão com texto dentro (padrão)
+- **Estilo Circular**: Ícone circular com texto no hover
+- **Tooltip inteligente** com posicionamento automático
+- **Transições suaves** e animações CSS
+
+### Sistema de Horários Diferenciados
+- **Horários por dia da semana**: Configure horários diferentes para cada dia
+- **Status automático**: Online/Offline baseado nos horários configurados
+- **Fusos horários brasileiros**: Suporte completo aos fusos do Brasil
+- **Formatação inteligente**: Agrupa dias com horários iguais
+
+### Sistema de Múltiplos Usuários
+- **Até 10 usuários**: Configure múltiplos atendentes
+- **Status individual**: Cada usuário pode ter status diferente
+- **Avatars personalizados**: Upload de fotos para cada usuário
+- **Horários individuais**: Cada usuário pode ter horários diferentes
+- **Widget de chat**: Interface moderna para escolher o atendente
 
 ---
 
@@ -112,9 +158,7 @@ dw-whatsapp.php (bootstrap)
     ↓
 Define constantes
     ↓
-Registra autoloader
-    ↓
-Hook: plugins_loaded → dw_whatsapp_init()
+Hook: plugins_loaded → dw_whatsapp_run()
     ↓
 DW_WhatsApp::instance()
     ↓
@@ -131,7 +175,9 @@ load_dependencies()
     ↓
 ├── DW_WhatsApp_Settings::instance()
 ├── DW_WhatsApp_Frontend::instance()
-└── DW_WhatsApp_Admin::instance() (se admin)
+├── DW_WhatsApp_Schedule::instance()
+├── DW_WhatsApp_Admin::instance() (se admin)
+└── DW_WhatsApp_Product::instance() (se WooCommerce + admin)
 ```
 
 ### 3. Frontend (Site)
@@ -140,11 +186,13 @@ DW_WhatsApp_Frontend::instance()
     ↓
 init_hooks()
     ↓
-├── woocommerce_single_product_summary (botão produto)
-├── woocommerce_loop_add_to_cart_link (botão loop)
 ├── wp_footer (botão flutuante)
-├── woocommerce_is_purchasable (produtos sem preço)
-└── woocommerce_get_price_html (altera preço)
+├── wp_enqueue_scripts (CSS/JS)
+└── init_woocommerce_hooks() (se WooCommerce ativo)
+    ├── woocommerce_single_product_summary (botão produto)
+    ├── woocommerce_loop_add_to_cart_link (botão loop)
+    ├── woocommerce_is_purchasable (produtos sem preço)
+    └── woocommerce_get_price_html (altera preço)
 ```
 
 ### 4. Admin (Painel)
@@ -177,6 +225,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 - `sanitize_text_field()` para textos
 - `sanitize_hex_color()` para cores
 - Whitelist para páginas e posições
+- Validação de arrays e objetos
 
 ### 3. Escape (Frontend)
 - `esc_url()` para URLs
@@ -234,11 +283,12 @@ if ( ! current_user_can( 'manage_options' ) ) {
 ```
 
 ### CSS
-```
-Estilos inline (integrados ao HTML)
-- Facilita manutenção
-- Evita conflitos
-- Customizável via tema
+```css
+// assets/css/frontend.css
+- Estilos base para botões
+- Animações e transições
+- Responsividade
+- 50 linhas, otimizado
 ```
 
 ---
@@ -247,7 +297,7 @@ Estilos inline (integrados ao HTML)
 
 ### README.md
 - Instalação e configuração
-- Lista de funcionalidades
+- Lista completa de funcionalidades
 - Requisitos do sistema
 - Exemplos de uso
 - Links úteis
@@ -276,8 +326,6 @@ class DW_WhatsApp_Nova_Feature {
     }
 }
 ```
-
-Autoloader cuida do resto!
 
 ### Adicionar Novo Hook
 ```php
@@ -314,9 +362,9 @@ private static function get_defaults() {
 ### Padrões
 - ✅ WordPress Coding Standards
 - ✅ WooCommerce Best Practices
-- ✅ PSR-4 Autoloading
 - ✅ Singleton Pattern
 - ✅ MVC Pattern
+- ✅ Carregamento Condicional
 
 ### Segurança
 - ✅ Sanitização completa
@@ -337,11 +385,11 @@ private static function get_defaults() {
 
 ## 📊 Métricas
 
-- **Classes:** 4
-- **Métodos:** ~30
-- **Hooks:** ~15
-- **Linhas de código:** ~1.080
-- **Arquivos:** 9
+- **Classes:** 6
+- **Métodos:** ~50
+- **Hooks:** ~20
+- **Linhas de código:** ~2.620
+- **Arquivos:** 14
 - **Erros de linting:** 0
 - **Cobertura de segurança:** 100%
 
@@ -354,13 +402,15 @@ private static function get_defaults() {
 2. Leia `class-dw-whatsapp.php` (principal)
 3. Explore `class-dw-whatsapp-settings.php` (configurações)
 4. Analise `class-dw-whatsapp-frontend.php` (botões)
-5. Veja `class-dw-whatsapp-admin.php` (admin)
+5. Veja `class-dw-whatsapp-schedule.php` (horários)
+6. Estude `class-dw-whatsapp-admin.php` (admin)
 
 ### Modificando o Plugin
 1. **Adicionar funcionalidade:** Crie nova classe em `includes/`
 2. **Modificar configurações:** Edite `class-dw-whatsapp-settings.php`
 3. **Alterar botões:** Edite `class-dw-whatsapp-frontend.php`
 4. **Mudar admin:** Edite `admin/views/settings-page.php`
+5. **Ajustar horários:** Edite `class-dw-whatsapp-schedule.php`
 
 ### Debugging
 ```php
@@ -378,5 +428,6 @@ error_log( print_r( $variavel, true ) );
 
 **Desenvolvido por David William da Costa**  
 GitHub: [@agenciadw](https://github.com/agenciadw/dw-whatsapp)
+
 
 

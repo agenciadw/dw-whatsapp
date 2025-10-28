@@ -23,11 +23,6 @@ class DW_WhatsApp_Schedule {
 			return $attendant['status'] === 'online';
 		}
 
-		// Verificar se tem configuração de horário
-		if ( empty( $attendant['work_start'] ) || empty( $attendant['work_end'] ) ) {
-			return $attendant['status'] === 'online';
-		}
-
 		// Obter timezone
 		$timezone = ! empty( $attendant['timezone'] ) ? $attendant['timezone'] : 'America/Sao_Paulo';
 		
@@ -42,18 +37,44 @@ class DW_WhatsApp_Schedule {
 		$current_day = strtolower( $now->format( 'l' ) ); // monday, tuesday, etc
 		$current_time = $now->format( 'H:i' );
 
-		// Verificar se hoje é dia de trabalho
-		$working_days = ! empty( $attendant['working_days'] ) ? $attendant['working_days'] : array( 'monday', 'tuesday', 'wednesday', 'thursday', 'friday' );
-		
-		if ( ! in_array( $current_day, $working_days ) ) {
-			return false; // Não trabalha hoje
+		// Verificar se tem configuração de horários por dia
+		if ( ! empty( $attendant['day_hours'] ) && is_array( $attendant['day_hours'] ) ) {
+			// Sistema novo: horários por dia
+			if ( ! isset( $attendant['day_hours'][ $current_day ] ) ) {
+				return false; // Dia não configurado
+			}
+			
+			$day_config = $attendant['day_hours'][ $current_day ];
+			
+			// Verificar se o dia está habilitado
+			if ( empty( $day_config['enabled'] ) || $day_config['enabled'] !== '1' ) {
+				return false; // Dia desabilitado
+			}
+			
+			// Verificar se está no horário de trabalho
+			$work_start = $day_config['start'] ?? '09:00';
+			$work_end = $day_config['end'] ?? '18:00';
+			
+			return ( $current_time >= $work_start && $current_time <= $work_end );
+		} else {
+			// Sistema antigo: horário único para todos os dias
+			if ( empty( $attendant['work_start'] ) || empty( $attendant['work_end'] ) ) {
+				return $attendant['status'] === 'online';
+			}
+
+			// Verificar se hoje é dia de trabalho
+			$working_days = ! empty( $attendant['working_days'] ) ? $attendant['working_days'] : array( 'monday', 'tuesday', 'wednesday', 'thursday', 'friday' );
+			
+			if ( ! in_array( $current_day, $working_days ) ) {
+				return false; // Não trabalha hoje
+			}
+
+			// Verificar se está no horário de trabalho
+			$work_start = $attendant['work_start'];
+			$work_end = $attendant['work_end'];
+
+			return ( $current_time >= $work_start && $current_time <= $work_end );
 		}
-
-		// Verificar se está no horário
-		$work_start = $attendant['work_start'];
-		$work_end = $attendant['work_end'];
-
-		return ( $current_time >= $work_start && $current_time <= $work_end );
 	}
 
 	/**
@@ -83,38 +104,89 @@ class DW_WhatsApp_Schedule {
 			return ! empty( $attendant['working_hours'] ) ? $attendant['working_hours'] : '';
 		}
 
-		if ( empty( $attendant['work_start'] ) || empty( $attendant['work_end'] ) ) {
-			return '';
-		}
+		// Verificar se tem configuração de horários por dia
+		if ( ! empty( $attendant['day_hours'] ) && is_array( $attendant['day_hours'] ) ) {
+			// Sistema novo: horários por dia
+			$days_full = array(
+				'monday'    => 'Segunda',
+				'tuesday'   => 'Terça',
+				'wednesday' => 'Quarta',
+				'thursday'  => 'Quinta',
+				'friday'    => 'Sexta',
+				'saturday'  => 'Sábado',
+				'sunday'    => 'Domingo',
+			);
 
-		$working_days = ! empty( $attendant['working_days'] ) ? $attendant['working_days'] : array( 'monday', 'tuesday', 'wednesday', 'thursday', 'friday' );
-		
-		// Nomes completos dos dias
-		$days_full = array(
-			'monday'    => 'Segunda',
-			'tuesday'   => 'Terça',
-			'wednesday' => 'Quarta',
-			'thursday'  => 'Quinta',
-			'friday'    => 'Sexta',
-			'saturday'  => 'Sábado',
-			'sunday'    => 'Domingo',
-		);
-
-		// Ordem dos dias da semana
-		$days_order = array( 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday' );
-		
-		// Organizar dias na ordem correta
-		$sorted_days = array();
-		foreach ( $days_order as $day ) {
-			if ( in_array( $day, $working_days ) ) {
-				$sorted_days[] = $day;
+			$days_order = array( 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday' );
+			
+			// Agrupar dias com horários iguais
+			$hours_groups = array();
+			foreach ( $days_order as $day ) {
+				if ( isset( $attendant['day_hours'][ $day ] ) && 
+					 ! empty( $attendant['day_hours'][ $day ]['enabled'] ) && 
+					 $attendant['day_hours'][ $day ]['enabled'] === '1' ) {
+					
+					$start = $attendant['day_hours'][ $day ]['start'] ?? '09:00';
+					$end = $attendant['day_hours'][ $day ]['end'] ?? '18:00';
+					$hours_key = $start . '-' . $end;
+					
+					if ( ! isset( $hours_groups[ $hours_key ] ) ) {
+						$hours_groups[ $hours_key ] = array(
+							'hours' => $start . ' às ' . $end,
+							'days' => array()
+						);
+					}
+					$hours_groups[ $hours_key ]['days'][] = $day;
+				}
 			}
+
+			if ( empty( $hours_groups ) ) {
+				return '';
+			}
+
+			// Formatar grupos de horários
+			$formatted_groups = array();
+			foreach ( $hours_groups as $group ) {
+				$days_text = self::format_days_range( $group['days'], $days_full );
+				$formatted_groups[] = $days_text . ' - ' . $group['hours'];
+			}
+
+			return implode( ' | ', $formatted_groups );
+		} else {
+			// Sistema antigo: horário único para todos os dias
+			if ( empty( $attendant['work_start'] ) || empty( $attendant['work_end'] ) ) {
+				return '';
+			}
+
+			$working_days = ! empty( $attendant['working_days'] ) ? $attendant['working_days'] : array( 'monday', 'tuesday', 'wednesday', 'thursday', 'friday' );
+			
+			// Nomes completos dos dias
+			$days_full = array(
+				'monday'    => 'Segunda',
+				'tuesday'   => 'Terça',
+				'wednesday' => 'Quarta',
+				'thursday'  => 'Quinta',
+				'friday'    => 'Sexta',
+				'saturday'  => 'Sábado',
+				'sunday'    => 'Domingo',
+			);
+
+			// Ordem dos dias da semana
+			$days_order = array( 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday' );
+			
+			// Organizar dias na ordem correta
+			$sorted_days = array();
+			foreach ( $days_order as $day ) {
+				if ( in_array( $day, $working_days ) ) {
+					$sorted_days[] = $day;
+				}
+			}
+
+			$days_text = self::format_days_range( $sorted_days, $days_full );
+			$hours = $attendant['work_start'] . ' às ' . $attendant['work_end'];
+
+			return $days_text . ' - ' . $hours;
 		}
-
-		$days_text = self::format_days_range( $sorted_days, $days_full );
-		$hours = $attendant['work_start'] . ' às ' . $attendant['work_end'];
-
-		return $days_text . ' - ' . $hours;
 	}
 
 	/**

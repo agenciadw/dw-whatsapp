@@ -50,22 +50,87 @@ $hidden_pages = isset( $settings['floating_button_hide_pages'] ) ? $settings['fl
 				<th scope="row">Exibir Botões</th>
 				<td>
 					<fieldset>
-						<label><input type="checkbox" name="dw_whatsapp_settings[show_on_product_page]" value="yes" <?php checked( $settings['show_on_product_page'], 'yes' ); ?>> Na página do produto</label><br>
-						<label><input type="checkbox" name="dw_whatsapp_settings[show_on_product_loop]" value="yes" <?php checked( $settings['show_on_product_loop'], 'yes' ); ?>> Na listagem de produtos</label><br>
+						<?php if ( class_exists( 'WooCommerce' ) ) : ?>
+							<label><input type="checkbox" name="dw_whatsapp_settings[show_on_product_page]" value="yes" <?php checked( $settings['show_on_product_page'], 'yes' ); ?>> Na página do produto</label><br>
+							<label><input type="checkbox" name="dw_whatsapp_settings[show_on_product_loop]" value="yes" <?php checked( $settings['show_on_product_loop'], 'yes' ); ?>> Na listagem de produtos</label><br>
+						<?php else : ?>
+							<div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+								<strong>⚠️ WooCommerce não detectado:</strong> As opções de produtos só funcionam com o WooCommerce instalado.
+							</div>
+						<?php endif; ?>
 						<label><input type="checkbox" name="dw_whatsapp_settings[show_floating_button]" value="yes" <?php checked( $settings['show_floating_button'], 'yes' ); ?>> Botão flutuante em todas as páginas</label>
 					</fieldset>
 				</td>
 			</tr>
 			
 			<tr>
-				<th scope="row"><label for="floating_button_position">Posição do Botão Flutuante</label></th>
+				<th scope="row"><label>Posição do Botão Flutuante</label></th>
 				<td>
-					<select id="floating_button_position" name="dw_whatsapp_settings[floating_button_position]">
-						<option value="bottom-right" <?php selected( $settings['floating_button_position'], 'bottom-right' ); ?>>Inferior Direito</option>
-						<option value="bottom-left" <?php selected( $settings['floating_button_position'], 'bottom-left' ); ?>>Inferior Esquerdo</option>
-						<option value="top-right" <?php selected( $settings['floating_button_position'], 'top-right' ); ?>>Superior Direito</option>
-						<option value="top-left" <?php selected( $settings['floating_button_position'], 'top-left' ); ?>>Superior Esquerdo</option>
+					<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+						<!-- Desktop -->
+						<div style="border: 1px solid #ddd; padding: 15px; border-radius: 5px; background: #f9f9f9;">
+							<h4 style="margin: 0 0 10px 0; color: #333;">🖥️ Desktop</h4>
+							<select name="dw_whatsapp_settings[floating_button_position_desktop]" style="width: 100%;">
+								<option value="bottom-right" <?php selected( $settings['floating_button_position_desktop'], 'bottom-right' ); ?>>Inferior Direito</option>
+								<option value="bottom-left" <?php selected( $settings['floating_button_position_desktop'], 'bottom-left' ); ?>>Inferior Esquerdo</option>
+								<option value="top-right" <?php selected( $settings['floating_button_position_desktop'], 'top-right' ); ?>>Superior Direito</option>
+								<option value="top-left" <?php selected( $settings['floating_button_position_desktop'], 'top-left' ); ?>>Superior Esquerdo</option>
+							</select>
+							<div style="margin-top: 10px;">
+								<label style="display: block; font-size: 12px; margin-bottom: 5px;">Ajuste Horizontal:</label>
+								<input type="number" name="dw_whatsapp_settings[floating_button_offset_x_desktop]" value="<?php echo esc_attr( $settings['floating_button_offset_x_desktop'] ); ?>" style="width: 60px; padding: 4px;" min="-100" max="100">
+								<label style="display: block; font-size: 12px; margin: 5px 0;">Ajuste Vertical:</label>
+								<input type="number" name="dw_whatsapp_settings[floating_button_offset_y_desktop]" value="<?php echo esc_attr( $settings['floating_button_offset_y_desktop'] ); ?>" style="width: 60px; padding: 4px;" min="-100" max="100">
+							</div>
+						</div>
+						
+						<!-- Mobile -->
+						<div style="border: 1px solid #ddd; padding: 15px; border-radius: 5px; background: #f0f8ff;">
+							<h4 style="margin: 0 0 10px 0; color: #333;">📱 Mobile</h4>
+							<select name="dw_whatsapp_settings[floating_button_position_mobile]" style="width: 100%;">
+								<option value="bottom-right" <?php selected( $settings['floating_button_position_mobile'], 'bottom-right' ); ?>>Inferior Direito</option>
+								<option value="bottom-left" <?php selected( $settings['floating_button_position_mobile'], 'bottom-left' ); ?>>Inferior Esquerdo</option>
+								<option value="top-right" <?php selected( $settings['floating_button_position_mobile'], 'top-right' ); ?>>Superior Direito</option>
+								<option value="top-left" <?php selected( $settings['floating_button_position_mobile'], 'top-left' ); ?>>Superior Esquerdo</option>
+							</select>
+							<div style="margin-top: 10px;">
+								<label style="display: block; font-size: 12px; margin-bottom: 5px;">Ajuste Horizontal:</label>
+								<input type="number" name="dw_whatsapp_settings[floating_button_offset_x_mobile]" value="<?php echo esc_attr( $settings['floating_button_offset_x_mobile'] ); ?>" style="width: 60px; padding: 4px;" min="-100" max="100">
+								<label style="display: block; font-size: 12px; margin: 5px 0;">Ajuste Vertical:</label>
+								<input type="number" name="dw_whatsapp_settings[floating_button_offset_y_mobile]" value="<?php echo esc_attr( $settings['floating_button_offset_y_mobile'] ); ?>" style="width: 60px; padding: 4px;" min="-100" max="100">
+							</div>
+						</div>
+					</div>
+					<p class="description">Configure posições diferentes para desktop e mobile. Isso permite otimizar a experiência em cada tipo de dispositivo.</p>
+				</td>
+			</tr>
+			
+			<!-- Advanced Button Settings -->
+			<tr>
+				<th colspan="2"><h2>🎨 Configurações Avançadas do Botão</h2></th>
+			</tr>
+			
+			<tr>
+				<th scope="row"><label for="floating_button_style">Estilo do Botão</label></th>
+				<td>
+					<fieldset>
+						<label><input type="radio" name="dw_whatsapp_settings[floating_button_style]" value="rectangular" <?php checked( $settings['floating_button_style'], 'rectangular' ); ?>> Retangular com texto dentro</label><br>
+						<label><input type="radio" name="dw_whatsapp_settings[floating_button_style]" value="circular" <?php checked( $settings['floating_button_style'], 'circular' ); ?>> Circular com texto no hover</label>
+					</fieldset>
+					<p class="description">Escolha entre botão retangular (atual) ou circular com texto que aparece ao passar o mouse</p>
+				</td>
+			</tr>
+			
+			
+			<tr>
+				<th scope="row"><label for="floating_button_size">Tamanho do Botão</label></th>
+				<td>
+					<select id="floating_button_size" name="dw_whatsapp_settings[floating_button_size]">
+						<option value="small" <?php selected( $settings['floating_button_size'], 'small' ); ?>>Pequeno</option>
+						<option value="medium" <?php selected( $settings['floating_button_size'], 'medium' ); ?>>Médio</option>
+						<option value="large" <?php selected( $settings['floating_button_size'], 'large' ); ?>>Grande</option>
 					</select>
+					<p class="description">Tamanho do botão flutuante</p>
 				</td>
 			</tr>
 			
@@ -240,61 +305,77 @@ $hidden_pages = isset( $settings['floating_button_hide_pages'] ) ? $settings['fl
 											</div>
 											
 											<div class="working-hours-fields" style="<?php echo ( isset( $user['auto_status'] ) && $user['auto_status'] === 'yes' ) ? '' : 'display: none;'; ?>">
-												<div style="margin-bottom: 10px;">
-													<label style="display: block; margin-bottom: 5px; font-weight: 600;">Dias da Semana:</label>
-													<?php
-													$days = array(
-														'monday' => 'Segunda',
-														'tuesday' => 'Terça',
-														'wednesday' => 'Quarta',
-														'thursday' => 'Quinta',
-														'friday' => 'Sexta',
-														'saturday' => 'Sábado',
-														'sunday' => 'Domingo'
-													);
-													$active_days = $user['working_days'] ?? array( 'monday', 'tuesday', 'wednesday', 'thursday', 'friday' );
-													foreach ( $days as $day_key => $day_name ) :
-													?>
-														<label style="display: inline-block; margin-right: 12px;">
-															<input type="checkbox" name="dw_whatsapp_settings[multi_users][<?php echo $index; ?>][working_days][]" value="<?php echo $day_key; ?>" <?php checked( in_array( $day_key, $active_days ) ); ?>>
-															<?php echo $day_name; ?>
-														</label>
-													<?php endforeach; ?>
-												</div>
-												
-												<div style="display: flex; gap: 15px; align-items: center;">
-													<div>
-														<label style="display: block; margin-bottom: 3px;">Início:</label>
-														<input type="time" name="dw_whatsapp_settings[multi_users][<?php echo $index; ?>][work_start]" value="<?php echo esc_attr( $user['work_start'] ?? '09:00' ); ?>" style="padding: 5px;">
-													</div>
-													<div>
-														<label style="display: block; margin-bottom: 3px;">Fim:</label>
-														<input type="time" name="dw_whatsapp_settings[multi_users][<?php echo $index; ?>][work_end]" value="<?php echo esc_attr( $user['work_end'] ?? '18:00' ); ?>" style="padding: 5px;">
-													</div>
-													<div style="flex: 1;">
-														<label style="display: block; margin-bottom: 3px;">Fuso Horário:</label>
-														<select name="dw_whatsapp_settings[multi_users][<?php echo $index; ?>][timezone]" style="width: 100%;">
-															<?php
-															$current_timezone = $user['timezone'] ?? 'America/Sao_Paulo';
-															$timezones = array(
-																'America/Sao_Paulo' => 'Brasília (GMT-3)',
-																'America/Fortaleza' => 'Fortaleza (GMT-3)',
-																'America/Recife' => 'Recife (GMT-3)',
-																'America/Manaus' => 'Manaus (GMT-4)',
-																'America/Rio_Branco' => 'Rio Branco (GMT-5)',
-																'America/Noronha' => 'Fernando de Noronha (GMT-2)',
-															);
-															foreach ( $timezones as $tz => $label ) :
-															?>
-																<option value="<?php echo esc_attr( $tz ); ?>" <?php selected( $current_timezone, $tz ); ?>><?php echo esc_html( $label ); ?></option>
-															<?php endforeach; ?>
-														</select>
+												<div style="margin-bottom: 15px;">
+													<label style="display: block; margin-bottom: 8px; font-weight: 600;">Horários por Dia da Semana:</label>
+													<div style="background: #f8f9fa; padding: 15px; border-radius: 5px; border: 1px solid #e9ecef;">
+														<?php
+														$days = array(
+															'monday' => 'Segunda-feira',
+															'tuesday' => 'Terça-feira',
+															'wednesday' => 'Quarta-feira',
+															'thursday' => 'Quinta-feira',
+															'friday' => 'Sexta-feira',
+															'saturday' => 'Sábado',
+															'sunday' => 'Domingo'
+														);
+														
+														foreach ( $days as $day_key => $day_name ) :
+															$day_start = $user['day_hours'][$day_key]['start'] ?? (in_array($day_key, ['saturday', 'sunday']) ? '08:00' : '09:00');
+															$day_end = $user['day_hours'][$day_key]['end'] ?? (in_array($day_key, ['saturday', 'sunday']) ? '12:00' : '18:00');
+															$day_enabled = $user['day_hours'][$day_key]['enabled'] ?? (in_array($day_key, ['saturday', 'sunday']) ? false : true);
+														?>
+														<div style="display: flex; align-items: center; margin-bottom: 10px; padding: 8px; background: white; border-radius: 4px; border: 1px solid #dee2e6;">
+															<div style="width: 120px; flex-shrink: 0;">
+																<label style="display: flex; align-items: center; margin: 0;">
+																	<input type="checkbox" name="dw_whatsapp_settings[multi_users][<?php echo $index; ?>][day_hours][<?php echo $day_key; ?>][enabled]" value="1" <?php checked( $day_enabled ); ?> style="margin-right: 8px;">
+																	<strong><?php echo $day_name; ?></strong>
+																</label>
+															</div>
+															<div style="display: flex; gap: 10px; align-items: center; flex: 1;">
+																<div>
+																	<label style="display: block; font-size: 12px; color: #666; margin-bottom: 2px;">Início:</label>
+																	<input type="time" name="dw_whatsapp_settings[multi_users][<?php echo $index; ?>][day_hours][<?php echo $day_key; ?>][start]" value="<?php echo esc_attr( $day_start ); ?>" style="padding: 4px 8px; border: 1px solid #ced4da; border-radius: 3px; font-size: 13px;" <?php echo $day_enabled ? '' : 'disabled'; ?>>
+																</div>
+																<div>
+																	<label style="display: block; font-size: 12px; color: #666; margin-bottom: 2px;">Fim:</label>
+																	<input type="time" name="dw_whatsapp_settings[multi_users][<?php echo $index; ?>][day_hours][<?php echo $day_key; ?>][end]" value="<?php echo esc_attr( $day_end ); ?>" style="padding: 4px 8px; border: 1px solid #ced4da; border-radius: 3px; font-size: 13px;" <?php echo $day_enabled ? '' : 'disabled'; ?>>
+																</div>
+																<div style="font-size: 12px; color: #666; min-width: 60px;">
+																	<?php if ( $day_enabled ) : ?>
+																		<span style="color: #28a745;">● Online</span>
+																	<?php else : ?>
+																		<span style="color: #dc3545;">● Offline</span>
+																	<?php endif; ?>
+																</div>
+															</div>
+														</div>
+														<?php endforeach; ?>
 													</div>
 												</div>
 												
-												<div style="margin-top: 8px;">
-													<small style="color: #666;">
-														💡 O status mudará automaticamente para Online/Offline baseado neste horário
+												<div style="margin-bottom: 15px;">
+													<label style="display: block; margin-bottom: 5px; font-weight: 600;">Fuso Horário:</label>
+													<select name="dw_whatsapp_settings[multi_users][<?php echo $index; ?>][timezone]" style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+														<?php
+														$current_timezone = $user['timezone'] ?? 'America/Sao_Paulo';
+														$timezones = array(
+															'America/Sao_Paulo' => 'Brasília (GMT-3)',
+															'America/Fortaleza' => 'Fortaleza (GMT-3)',
+															'America/Recife' => 'Recife (GMT-3)',
+															'America/Manaus' => 'Manaus (GMT-4)',
+															'America/Rio_Branco' => 'Rio Branco (GMT-5)',
+															'America/Noronha' => 'Fernando de Noronha (GMT-2)',
+														);
+														foreach ( $timezones as $tz => $label ) :
+														?>
+															<option value="<?php echo esc_attr( $tz ); ?>" <?php selected( $current_timezone, $tz ); ?>><?php echo esc_html( $label ); ?></option>
+														<?php endforeach; ?>
+													</select>
+												</div>
+												
+												<div style="background: #e7f3ff; padding: 12px; border-radius: 5px; border-left: 4px solid #007bff;">
+													<small style="color: #0056b3;">
+														💡 <strong>Dica:</strong> Configure horários diferentes para cada dia. Por exemplo: Segunda a Sexta das 08:00 às 17:00 e Sábado das 08:00 às 12:00. O status mudará automaticamente para Online/Offline baseado nos horários configurados.
 													</small>
 												</div>
 											</div>
@@ -322,8 +403,14 @@ $hidden_pages = isset( $settings['floating_button_hide_pages'] ) ? $settings['fl
 				<th scope="row">Incluir na Mensagem</th>
 				<td>
 					<fieldset>
-						<label><input type="checkbox" name="dw_whatsapp_settings[include_product_link]" value="yes" <?php checked( $settings['include_product_link'], 'yes' ); ?>> Link do produto</label><br>
-						<label><input type="checkbox" name="dw_whatsapp_settings[include_variations]" value="yes" <?php checked( $settings['include_variations'], 'yes' ); ?>> Variações selecionadas (cor, tamanho, etc.)</label>
+						<?php if ( class_exists( 'WooCommerce' ) ) : ?>
+							<label><input type="checkbox" name="dw_whatsapp_settings[include_product_link]" value="yes" <?php checked( $settings['include_product_link'], 'yes' ); ?>> Link do produto</label><br>
+							<label><input type="checkbox" name="dw_whatsapp_settings[include_variations]" value="yes" <?php checked( $settings['include_variations'], 'yes' ); ?>> Variações selecionadas (cor, tamanho, etc.)</label>
+						<?php else : ?>
+							<div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 4px;">
+								<strong>⚠️ WooCommerce não detectado:</strong> Estas opções só funcionam com o WooCommerce instalado.
+							</div>
+						<?php endif; ?>
 					</fieldset>
 				</td>
 			</tr>
@@ -339,6 +426,18 @@ $hidden_pages = isset( $settings['floating_button_hide_pages'] ) ? $settings['fl
 		<p><strong>Versão:</strong> <?php echo esc_html( DW_WHATSAPP_VERSION ); ?></p>
 		<p><strong>Desenvolvido por:</strong> David William da Costa</p>
 		<p><strong>GitHub:</strong> <a href="https://github.com/agenciadw/dw-whatsapp" target="_blank">@agenciadw/dw-whatsapp</a></p>
+		
+		<?php if ( ! class_exists( 'WooCommerce' ) ) : ?>
+			<div style="background: #e7f7ed; border: 1px solid #25d366; padding: 15px; border-radius: 4px; margin-top: 15px;">
+				<h4 style="margin-top: 0; color: #25d366;">✅ Plugin Funcionando sem WooCommerce</h4>
+				<p style="margin-bottom: 0;">O botão flutuante do WhatsApp está funcionando normalmente em todas as páginas do seu site, mesmo sem o WooCommerce instalado. Para usar todas as funcionalidades (botões em produtos, variações, etc.), instale o WooCommerce.</p>
+			</div>
+		<?php else : ?>
+			<div style="background: #e7f7ed; border: 1px solid #25d366; padding: 15px; border-radius: 4px; margin-top: 15px;">
+				<h4 style="margin-top: 0; color: #25d366;">✅ WooCommerce Detectado</h4>
+				<p style="margin-bottom: 0;">Todas as funcionalidades do plugin estão disponíveis, incluindo botões em produtos e integração completa com o WooCommerce.</p>
+			</div>
+		<?php endif; ?>
 	</div>
 </div>
 
@@ -476,6 +575,24 @@ jQuery(document).ready(function($) {
 		} else {
 			$workingHoursFields.slideUp();
 			$manualHoursField.slideDown();
+		}
+	});
+	
+	// Toggle day hours fields
+	$(document).on('change', 'input[name*="[day_hours]"][name*="[enabled]"]', function() {
+		const $dayRow = $(this).closest('div[style*="display: flex"]');
+		const $startInput = $dayRow.find('input[name*="[start]"]');
+		const $endInput = $dayRow.find('input[name*="[end]"]');
+		const $statusSpan = $dayRow.find('span');
+		
+		if ($(this).is(':checked')) {
+			$startInput.prop('disabled', false);
+			$endInput.prop('disabled', false);
+			$statusSpan.html('<span style="color: #28a745;">● Online</span>');
+		} else {
+			$startInput.prop('disabled', true);
+			$endInput.prop('disabled', true);
+			$statusSpan.html('<span style="color: #dc3545;">● Offline</span>');
 		}
 	});
 	

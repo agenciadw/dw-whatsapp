@@ -62,16 +62,23 @@ class DW_WhatsApp {
 	private function init_hooks() {
 		add_action( 'plugins_loaded', array( $this, 'check_requirements' ) );
 		add_action( 'init', array( $this, 'load_textdomain' ) );
-		add_action( 'before_woocommerce_init', array( $this, 'declare_hpos_compatibility' ) );
+		
+		// Sempre carregar configurações e frontend (funciona com ou sem WooCommerce)
+		DW_WhatsApp_Settings::instance();
+		DW_WhatsApp_Frontend::instance();
 
-		if ( $this->is_woocommerce_active() ) {
-			DW_WhatsApp_Settings::instance();
-			DW_WhatsApp_Frontend::instance();
+		// Sempre carregar admin (funciona com ou sem WooCommerce)
+		if ( is_admin() ) {
+			DW_WhatsApp_Admin::instance();
 			
-			if ( is_admin() ) {
-				DW_WhatsApp_Admin::instance();
+			// Só carregar funcionalidades específicas do WooCommerce se estiver ativo
+			if ( $this->is_woocommerce_active() ) {
 				DW_WhatsApp_Product::instance();
 			}
+		}
+
+		if ( $this->is_woocommerce_active() ) {
+			add_action( 'before_woocommerce_init', array( $this, 'declare_hpos_compatibility' ) );
 		}
 	}
 
@@ -79,9 +86,8 @@ class DW_WhatsApp {
 	 * Check requirements
 	 */
 	public function check_requirements() {
-		if ( ! $this->is_woocommerce_active() ) {
-			add_action( 'admin_notices', array( $this, 'woocommerce_missing_notice' ) );
-		}
+		// Plugin agora funciona com ou sem WooCommerce
+		// O aviso só aparece se o usuário tentar usar funcionalidades específicas do WooCommerce
 	}
 
 	/**
