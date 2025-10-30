@@ -156,6 +156,14 @@ GPL v2 ou posterior - https://www.gnu.org/licenses/gpl-2.0.html
 
 ## 🔄 Changelog
 
+### Versão 1.0.1 - 30-10-2025
+- 🔧 Mensagens do botão flutuante separadas por contexto:
+  - Nova: "Mensagem do Botão Flutuante (páginas de produto)" com suporte a `{product_name}`
+  - Mantida: "Mensagem do Botão Flutuante" para páginas comuns
+- 🧠 Substituição automática de `{product_name}` nas páginas de produto (botão flutuante e widget de múltiplos usuários)
+- 🔗 Inclusão opcional do link do produto nas mensagens do botão flutuante em páginas de produto, respeitando "Incluir na Mensagem > Link do produto"
+- ✂️ Uso de shortlink do WordPress (`wp_get_shortlink`) quando disponível; fallback para permalink
+
 ### Versão 1.0.0 - 28-10-2025
 - 🎉 **Lançamento inicial** com funcionalidades completas
 - ✨ **Sistema de posicionamento avançado** com ajuste fino

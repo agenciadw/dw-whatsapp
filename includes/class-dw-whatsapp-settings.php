@@ -111,6 +111,7 @@ class DW_WhatsApp_Settings {
 			'button_text_without_price'  => 'Solicitar Orçamento',
 			'floating_button_text'       => 'Fale Conosco',
 			'floating_button_message'    => 'Olá! Vim pelo site e gostaria de mais informações.',
+			'floating_button_message_product' => 'Olá! Gostaria de saber mais sobre {product_name}.',
 			'include_product_link'       => 'yes',
 			'include_variations'         => 'yes',
 			'button_color'               => '#25d366',
@@ -181,6 +182,7 @@ class DW_WhatsApp_Settings {
 		$sanitized['button_text_without_price']  = isset( $input['button_text_without_price'] ) ? sanitize_text_field( $input['button_text_without_price'] ) : '';
 		$sanitized['floating_button_text']       = isset( $input['floating_button_text'] ) ? sanitize_text_field( $input['floating_button_text'] ) : '';
 		$sanitized['floating_button_message']    = isset( $input['floating_button_message'] ) ? sanitize_text_field( $input['floating_button_message'] ) : '';
+		$sanitized['floating_button_message_product'] = isset( $input['floating_button_message_product'] ) ? sanitize_text_field( $input['floating_button_message_product'] ) : '';
 		$sanitized['chat_widget_title']          = isset( $input['chat_widget_title'] ) ? sanitize_text_field( $input['chat_widget_title'] ) : '';
 		$sanitized['chat_widget_subtitle']       = isset( $input['chat_widget_subtitle'] ) ? sanitize_text_field( $input['chat_widget_subtitle'] ) : '';
 		$sanitized['chat_widget_availability']   = isset( $input['chat_widget_availability'] ) ? sanitize_text_field( $input['chat_widget_availability'] ) : '';

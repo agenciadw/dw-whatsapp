@@ -5,6 +5,16 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
 e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [1.0.1] - 2025-10-30
+
+### Adicionado
+- Mensagem específica para páginas de produto no botão flutuante, com suporte a `{product_name}`
+- Substituição automática de `{product_name}` nas mensagens do botão flutuante (single user e multi users) em páginas de produto
+- Inclusão opcional do link do produto na mensagem do botão flutuante em páginas de produto, respeitando a configuração "Link do produto"
+
+### Alterado
+- Uso de `wp_get_shortlink` para encurtar a URL do produto quando disponível; fallback para `get_permalink`
+
 ## [1.0.0] - 2024-12-19
 
 ### 🎉 Lançamento Inicial

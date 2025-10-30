@@ -171,7 +171,7 @@ class DW_WhatsApp_Frontend {
 		$message = str_replace( '{product_name}', $product->get_name(), $template );
 
 		if ( DW_WhatsApp_Settings::get( 'include_product_link' ) === 'yes' ) {
-			$message .= ' - Link: ' . get_permalink( $product->get_id() );
+			$message .= ' - Link: ' . $this->get_product_link( $product );
 		}
 
 		return 'https://wa.me/' . $phone . '?text=' . rawurlencode( $message );
@@ -266,7 +266,26 @@ class DW_WhatsApp_Frontend {
 	private function render_single_user_button() {
 		$phone = preg_replace( '/[^0-9]/', '', DW_WhatsApp_Settings::get( 'phone_number' ) );
 		$text = DW_WhatsApp_Settings::get( 'floating_button_text', 'Fale Conosco' );
-		$message = DW_WhatsApp_Settings::get( 'floating_button_message', 'Olá! Vim pelo site e gostaria de mais informações.' );
+		// Escolhe a mensagem conforme o contexto (produto x páginas comuns)
+		if ( $this->is_woocommerce_active() && function_exists( 'is_product' ) && is_product() ) {
+			$message = DW_WhatsApp_Settings::get( 'floating_button_message_product', '' );
+			if ( $message === '' ) {
+				$message = DW_WhatsApp_Settings::get( 'floating_button_message', 'Olá! Vim pelo site e gostaria de mais informações.' );
+			}
+		} else {
+			$message = DW_WhatsApp_Settings::get( 'floating_button_message', 'Olá! Vim pelo site e gostaria de mais informações.' );
+		}
+
+		// Substituir placeholder {product_name} e anexar link quando estiver em uma página de produto
+		if ( $this->is_woocommerce_active() && function_exists( 'is_product' ) && is_product() ) {
+			global $product;
+			if ( $product && is_object( $product ) ) {
+				$message = str_replace( '{product_name}', $product->get_name(), $message );
+				if ( DW_WhatsApp_Settings::get( 'include_product_link' ) === 'yes' ) {
+					$message .= ' - Link: ' . $this->get_product_link( $product );
+				}
+			}
+		}
 		
 		// Configurações separadas para desktop e mobile
 		$position_desktop = DW_WhatsApp_Settings::get( 'floating_button_position_desktop', 'bottom-right' );
@@ -609,10 +628,31 @@ class DW_WhatsApp_Frontend {
 		$message = str_replace( '{product_name}', $product->get_name(), $template );
 
 		if ( DW_WhatsApp_Settings::get( 'include_product_link' ) === 'yes' ) {
-			$message .= ' - Link: ' . get_permalink( $product->get_id() );
+			$message .= ' - Link: ' . $this->get_product_link( $product );
 		}
 
 		return 'https://wa.me/' . $phone . '?text=' . rawurlencode( $message );
+	}
+
+	/**
+	 * Get product link preferring WordPress shortlink when available
+	 *
+	 * @param WC_Product $product Product object.
+	 * @return string
+	 */
+	private function get_product_link( $product ) {
+		if ( ! $product || ! is_object( $product ) ) {
+			return '';
+		}
+		$product_id = method_exists( $product, 'get_id' ) ? $product->get_id() : 0;
+		$permalink = get_permalink( $product_id );
+		$shortlink = function_exists( 'wp_get_shortlink' ) ? wp_get_shortlink( $product_id ) : '';
+
+		// Usar shortlink se existir e for menor, senão usar o permalink
+		if ( ! empty( $shortlink ) && strlen( $shortlink ) < strlen( $permalink ) ) {
+			return $shortlink;
+		}
+		return $permalink;
 	}
 
 	/**
@@ -711,7 +751,25 @@ class DW_WhatsApp_Frontend {
 		$phone = preg_replace( '/[^0-9]/', '', $user['phone'] ?? '' );
 		$avatar = esc_url( $user['avatar'] ?? '' );
 		$status_message = esc_html( $user['status_message'] ?? '' );
-		$message = DW_WhatsApp_Settings::get( 'floating_button_message', 'Olá! Vim pelo site e gostaria de mais informações.' );
+		// Escolhe a mensagem conforme o contexto (produto x páginas comuns)
+		if ( $this->is_woocommerce_active() && function_exists( 'is_product' ) && is_product() ) {
+			$message = DW_WhatsApp_Settings::get( 'floating_button_message_product', '' );
+			if ( $message === '' ) {
+				$message = DW_WhatsApp_Settings::get( 'floating_button_message', 'Olá! Vim pelo site e gostaria de mais informações.' );
+			}
+		} else {
+			$message = DW_WhatsApp_Settings::get( 'floating_button_message', 'Olá! Vim pelo site e gostaria de mais informações.' );
+		}
+		// Substituir placeholder {product_name} e anexar link quando estiver em uma página de produto
+		if ( $this->is_woocommerce_active() && function_exists( 'is_product' ) && is_product() ) {
+			global $product;
+			if ( $product && is_object( $product ) ) {
+				$message = str_replace( '{product_name}', $product->get_name(), $message );
+				if ( DW_WhatsApp_Settings::get( 'include_product_link' ) === 'yes' ) {
+					$message .= ' - Link: ' . $this->get_product_link( $product );
+				}
+			}
+		}
 
 		// Usar status automático baseado em horário (se configurado)
 		$status = DW_WhatsApp_Schedule::get_current_status( $user );

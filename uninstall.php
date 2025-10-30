@@ -27,3 +27,4 @@ if ( is_multisite() ) {
         restore_current_blog();
     }
 }
+

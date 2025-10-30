@@ -201,7 +201,17 @@ $hidden_pages = isset( $settings['floating_button_hide_pages'] ) ? $settings['fl
 			
 			<tr>
 				<th scope="row"><label for="floating_button_message">Mensagem do Botão Flutuante</label></th>
-				<td><textarea id="floating_button_message" name="dw_whatsapp_settings[floating_button_message]" rows="3" class="large-text"><?php echo esc_textarea( $settings['floating_button_message'] ); ?></textarea></td>
+				<td>
+					<textarea id="floating_button_message" name="dw_whatsapp_settings[floating_button_message]" rows="3" class="large-text"><?php echo esc_textarea( $settings['floating_button_message'] ); ?></textarea>
+					<p class="description">Mensagem usada em páginas comuns. Para páginas de produto, use o campo abaixo.</p>
+				</td>
+			</tr>
+			<tr>
+				<th scope="row"><label for="floating_button_message_product">Mensagem do Botão Flutuante (páginas de produto)</label></th>
+				<td>
+					<textarea id="floating_button_message_product" name="dw_whatsapp_settings[floating_button_message_product]" rows="3" class="large-text"><?php echo esc_textarea( $settings['floating_button_message_product'] ?? '' ); ?></textarea>
+					<p class="description">Use {product_name} para inserir o nome do produto</p>
+				</td>
 			</tr>
 			
 			<!-- Multi Users -->
