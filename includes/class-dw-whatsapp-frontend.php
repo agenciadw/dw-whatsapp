@@ -421,7 +421,7 @@ class DW_WhatsApp_Frontend {
 		echo '<div class="dw-widget-header" style="background: ' . $color . '; color: white; padding: 20px; text-align: center;">';
 		echo '<div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px;">';
 		echo $this->get_whatsapp_icon( '24px' );
-		echo '<h3 style="margin: 0; font-size: 18px; font-weight: 600;">' . esc_html( $title ) . '</h3>';
+		echo '<h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #ffffff;">' . esc_html( $title ) . '</h3>';
 		echo '</div>';
 		echo '<p style="margin: 0; font-size: 14px; opacity: 0.9;">' . esc_html( $subtitle ) . '</p>';
 		echo '</div>';
