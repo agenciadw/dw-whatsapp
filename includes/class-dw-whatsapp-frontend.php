@@ -414,7 +414,7 @@ class DW_WhatsApp_Frontend {
 		}
 
 		// Chat widget - posicionamento dinâmico baseado na posição do botão
-		$widget_position = $this->get_widget_position( $position );
+		$widget_position = $this->get_widget_position( $position_desktop );
 		echo '<div id="dw-whatsapp-widget" class="dw-whatsapp-widget" style="display: none; position: absolute; ' . $widget_position . ' width: 320px; background: white; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); overflow: hidden; animation: dwSlideUp 0.3s ease;">';
 		
 		// Header
