@@ -3,13 +3,13 @@
  * Plugin Name: DW WhatsApp para WooCommerce
  * Plugin URI: https://github.com/agenciadw/dw-whatsapp
  * Description: Plugin para integração do WhatsApp com WooCommerce. Adiciona botões de WhatsApp em produtos e botão flutuante em todas as páginas. Funciona com ou sem WooCommerce.
- * Version: 1.0.1
+ * Version: 2.0.0
  * Author: David William da Costa
  * Author URI: https://dwdigital.com.br
  * Text Domain: dw-whatsapp
  * Domain Path: /languages
  * Requires at least: 5.0
- * Tested up to: 6.4
+ * Tested up to: 6.8
  * Requires PHP: 7.4
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -25,7 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Define plugin constants
 if ( ! defined( 'DW_WHATSAPP_VERSION' ) ) {
-    define( 'DW_WHATSAPP_VERSION', '1.0.1' );
+    define( 'DW_WHATSAPP_VERSION', '2.0.0' );
 }
 
 if ( ! defined( 'DW_WHATSAPP_FILE' ) ) {
@@ -52,3 +52,17 @@ function dw_whatsapp_run() {
     DW_WhatsApp::instance();
 }
 add_action( 'plugins_loaded', 'dw_whatsapp_run' );
+
+// Activation hook
+register_activation_hook( __FILE__, 'dw_whatsapp_activate' );
+function dw_whatsapp_activate() {
+    require_once DW_WHATSAPP_PATH . 'includes/class-dw-whatsapp-leads.php';
+    DW_WhatsApp_Leads::create_table();
+}
+
+// Check and create table on admin init (for updates)
+add_action( 'admin_init', 'dw_whatsapp_check_table' );
+function dw_whatsapp_check_table() {
+    require_once DW_WHATSAPP_PATH . 'includes/class-dw-whatsapp-leads.php';
+    DW_WhatsApp_Leads::create_table();
+}

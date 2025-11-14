@@ -42,9 +42,28 @@ Plugin WordPress profissional para integração completa do WhatsApp com WooComm
 - **Botões em páginas de produto**: Integração nativa com WooCommerce
 - **Botões em listagem de produtos**: Aparece na loja e categorias
 - **Integração com variações**: Suporte completo a produtos variáveis
+- **Seletor de quantidade no loop**: Suporte nativo para seletores de quantidade no catálogo
+- **Compatibilidade Woodmart**: Integração completa com o tema Woodmart
 - **Links de produtos**: Inclui link do produto nas mensagens
 - **Controle de produtos sem preço**: Botão especial para produtos sem preço
 - **Compatibilidade HPOS**: Suporte ao High-Performance Order Storage
+
+### 📋 **Sistema de Captura de Leads**
+- **Captura de dados antes do WhatsApp**: Modal elegante para capturar nome, e-mail e telefone
+- **Campos configuráveis**: Escolha quais campos exibir e quais são obrigatórios
+- **Máscara de telefone brasileiro**: Formatação automática (99) 99999-9999
+- **Validação em tempo real**: Validação de campos obrigatórios e formato de e-mail
+- **Design moderno**: Modal com gradiente verde WhatsApp e animações suaves
+- **Cache busting**: CSS versionado automaticamente para evitar problemas de cache
+
+### 📊 **Gerenciamento de Leads**
+- **Base de dados dedicada**: Tabela customizada para armazenar todos os leads
+- **Detecção de clientes WooCommerce**: Identifica automaticamente se o lead é cliente
+- **Agrupamento inteligente**: Contatos duplicados são agrupados com contador de contatos
+- **Histórico completo**: Primeiro e último contato registrados
+- **Exportação de dados**: Exporte leads em CSV ou Excel com um clique
+- **Busca avançada**: Busque leads por nome, e-mail ou telefone
+- **Paginação**: Navegação fácil através de grandes volumes de leads
 
 ### 🎨 **Interface e Design**
 - **Design responsivo**: Funciona perfeitamente em mobile
@@ -85,6 +104,13 @@ Plugin WordPress profissional para integração completa do WhatsApp com WooComm
 - **Mensagem do Botão Flutuante**: Mensagem padrão para contato geral
 - **Textos dos Botões**: Personalize os textos dos botões
 
+### 📋 Captura de Dados de Contato
+- **Habilitar captura**: Ative ou desative a captura de dados antes de enviar para WhatsApp
+- **Campos a exibir**: Escolha quais campos mostrar (Nome, E-mail, Telefone)
+- **Campos obrigatórios**: Defina quais campos são obrigatórios
+- **Título e subtítulo**: Personalize os textos do modal de captura
+- **Máscara automática**: Telefone formatado automaticamente no padrão brasileiro
+
 ### 👥 Sistema de Múltiplos Usuários
 - **Ative o sistema**: Marque "Habilitar múltiplos usuários"
 - **Configure usuários**: Nome, telefone, departamento e avatar
@@ -117,7 +143,8 @@ Plugin WordPress profissional para integração completa do WhatsApp com WooComm
 - **WordPress**: 5.0 ou superior
 - **PHP**: 7.4 ou superior
 - **WooCommerce**: Opcional (funciona perfeitamente sem)
-- **Testado até**: WordPress 6.4
+- **Testado até**: WordPress 6.8
+- **Temas compatíveis**: Woodmart e outros temas WooCommerce
 - **Navegadores**: Chrome, Firefox, Safari, Edge
 
 ## 📱 Funcionalidades Mobile
@@ -155,6 +182,30 @@ Plugin WordPress profissional para integração completa do WhatsApp com WooComm
 GPL v2 ou posterior - https://www.gnu.org/licenses/gpl-2.0.html
 
 ## 🔄 Changelog
+
+### Versão 2.0.0 - 13-11-2025
+- 🎉 **Lançamento da versão 2.0** com sistema completo de captura e gerenciamento de leads
+- 📋 **Sistema de Captura de Dados**: Modal elegante para capturar nome, e-mail e telefone antes de enviar para WhatsApp
+- 🎨 **Design do Modal**: Interface moderna com gradiente verde WhatsApp, animações suaves e botão de fechar posicionado
+- ✅ **Validação em Tempo Real**: Validação de campos obrigatórios e formato de e-mail antes de enviar
+- 📱 **Máscara de Telefone Brasileiro**: Formatação automática (99) 99999-9999 para celular e (99) 9999-9999 para fixo
+- 💾 **Base de Dados de Leads**: Tabela customizada para armazenar todos os leads capturados
+- 🔍 **Detecção de Clientes WooCommerce**: Identifica automaticamente se o lead é cliente pelo e-mail
+- 📊 **Gerenciamento de Leads**: Página dedicada no admin para visualizar, buscar e gerenciar leads
+- 🔄 **Agrupamento Inteligente**: Contatos duplicados são agrupados com contador de quantas vezes entraram em contato
+- 📥 **Exportação de Dados**: Exporte leads em CSV ou Excel com formatação profissional
+- 🎯 **Busca e Paginação**: Sistema completo de busca e paginação para grandes volumes de dados
+- 🚀 **Performance**: Otimizações de código e limpeza de buffers para exportação limpa
+- 🧹 **Clean Code**: Código limpo, organizado e pronto para produção
+
+### Versão 1.0.2 - 11-11-2025
+- 🎯 **Suporte para seletor de quantidade no loop/catálogo**: Integração completa com tema Woodmart
+- 🔄 **Sincronização automática**: Quantidade selecionada é incluída automaticamente na mensagem do WhatsApp
+- 📊 **Monitoramento inteligente**: Detecta mudanças em botões +/-, digitação direta e perda de foco
+- 🎨 **Estilos otimizados**: CSS específico para melhor integração visual com Woodmart
+- ⚡ **Suporte AJAX**: Funciona com carregamento dinâmico de produtos
+- 📱 **Totalmente responsivo**: Funciona perfeitamente em mobile e desktop
+- 🎭 **Animação no hover**: Efeito suave de elevação ao passar o mouse no botão WhatsApp
 
 ### Versão 1.0.1 - 30-10-2025
 - 🔧 Mensagens do botão flutuante separadas por contexto:

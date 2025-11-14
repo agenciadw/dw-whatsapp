@@ -404,6 +404,68 @@ $hidden_pages = isset( $settings['floating_button_hide_pages'] ) ? $settings['fl
 				</td>
 			</tr>
 			
+			<!-- Contact Capture -->
+			<tr>
+				<th colspan="2"><h2>📋 Captura de Dados de Contato</h2></th>
+			</tr>
+			
+			<tr>
+				<th scope="row">Habilitar Captura de Dados</th>
+				<td>
+					<fieldset>
+						<label><input type="checkbox" name="dw_whatsapp_settings[enable_contact_capture]" value="yes" <?php checked( $settings['enable_contact_capture'], 'yes' ); ?>> Solicitar nome, e-mail e/ou telefone antes de enviar para WhatsApp</label>
+						<p class="description">Quando ativado, um formulário será exibido antes de redirecionar para o WhatsApp, permitindo capturar os dados do cliente.</p>
+					</fieldset>
+				</td>
+			</tr>
+			
+			<tr id="contact-capture-section" style="<?php echo $settings['enable_contact_capture'] === 'yes' ? '' : 'display: none;'; ?>">
+				<th scope="row">Configurações de Captura</th>
+				<td>
+					<table class="form-table">
+						<tr>
+							<th scope="row"><label for="contact_capture_title">Título do Formulário</label></th>
+							<td><input type="text" id="contact_capture_title" name="dw_whatsapp_settings[contact_capture_title]" value="<?php echo esc_attr( $settings['contact_capture_title'] ?? 'Antes de continuar' ); ?>" class="regular-text"></td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="contact_capture_subtitle">Subtítulo do Formulário</label></th>
+							<td><textarea id="contact_capture_subtitle" name="dw_whatsapp_settings[contact_capture_subtitle]" rows="2" class="large-text"><?php echo esc_textarea( $settings['contact_capture_subtitle'] ?? 'Por favor, preencha seus dados para que possamos atendê-lo melhor:' ); ?></textarea></td>
+						</tr>
+						<tr>
+							<th scope="row">Campos a Exibir</th>
+							<td>
+								<fieldset>
+									<?php
+									$capture_fields = isset( $settings['contact_capture_fields'] ) ? $settings['contact_capture_fields'] : array( 'name', 'email', 'phone' );
+									?>
+									<label><input type="checkbox" name="dw_whatsapp_settings[contact_capture_fields][]" value="name" <?php checked( in_array( 'name', $capture_fields, true ) ); ?>> Nome</label><br>
+									<label><input type="checkbox" name="dw_whatsapp_settings[contact_capture_fields][]" value="email" <?php checked( in_array( 'email', $capture_fields, true ) ); ?>> E-mail</label><br>
+									<label><input type="checkbox" name="dw_whatsapp_settings[contact_capture_fields][]" value="phone" <?php checked( in_array( 'phone', $capture_fields, true ) ); ?>> Telefone</label>
+									<p class="description">Selecione quais campos devem aparecer no formulário</p>
+								</fieldset>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row">Campos Obrigatórios</th>
+							<td>
+								<fieldset>
+									<?php
+									$required_fields = isset( $settings['contact_capture_required'] ) ? $settings['contact_capture_required'] : array( 'name' );
+									?>
+									<label><input type="checkbox" name="dw_whatsapp_settings[contact_capture_required][]" value="name" <?php checked( in_array( 'name', $required_fields, true ) ); ?>> Nome</label><br>
+									<label><input type="checkbox" name="dw_whatsapp_settings[contact_capture_required][]" value="email" <?php checked( in_array( 'email', $required_fields, true ) ); ?>> E-mail</label><br>
+									<label><input type="checkbox" name="dw_whatsapp_settings[contact_capture_required][]" value="phone" <?php checked( in_array( 'phone', $required_fields, true ) ); ?>> Telefone</label>
+									<p class="description">Campos marcados como obrigatórios precisam ser preenchidos para continuar</p>
+								</fieldset>
+							</td>
+						</tr>
+					</table>
+					<div style="background: #e7f3ff; padding: 12px; border-radius: 5px; border-left: 4px solid #007bff; margin-top: 10px;">
+						<strong>💡 Dica:</strong> Os dados capturados serão incluídos na mensagem enviada para o WhatsApp, facilitando o atendimento personalizado.
+					</div>
+				</td>
+			</tr>
+			
 			<!-- Advanced Options -->
 			<tr>
 				<th colspan="2"><h2>🔧 Opções Avançadas</h2></th>
@@ -462,6 +524,15 @@ jQuery(document).ready(function($) {
 			$('#multi-users-section, #users-list-section').show();
 		} else {
 			$('#multi-users-section, #users-list-section').hide();
+		}
+	});
+	
+	// Toggle contact capture section
+	$('input[name="dw_whatsapp_settings[enable_contact_capture]"]').change(function() {
+		if ($(this).is(':checked')) {
+			$('#contact-capture-section').show();
+		} else {
+			$('#contact-capture-section').hide();
 		}
 	});
 	

@@ -34,10 +34,351 @@
     animation: dwPulse 0.3s ease;
 }
 
+/* Suporte para seletor de quantidade no loop - Woodmart */
+.wd-add-btn .quantity {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0px;
+}
+
+.wd-add-btn .quantity input.qty {
+    text-align: center;
+    min-width: 40px;
+}
+
+.wd-add-btn .quantity .minus,
+.wd-add-btn .quantity .plus {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.wd-add-btn .quantity .minus:hover,
+.wd-add-btn .quantity .plus:hover {
+    opacity: 0.7;
+}
+
+/* Wrapper do botão WhatsApp no loop */
+.dw-whatsapp-wrapper-loop {
+    clear: both;
+    display: block;
+}
+
+/* Garante que o botão do WhatsApp tenha espaçamento adequado */
+.dw-whatsapp-button-loop {
+    transition: all 0.3s ease;
+    text-decoration: none !important;
+}
+
+.dw-whatsapp-button-loop:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3) !important;
+    text-decoration: none !important;
+}
+
 /* Responsivo */
 @media (max-width: 768px) {
     .dw-select-attendant {
         font-size: 16px !important; /* Evita zoom no iOS */
+    }
+    
+    .wd-add-btn .quantity {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Modal de Captura de Contato */
+.dw-contact-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 999999;
+    animation: dwFadeIn 0.3s ease;
+}
+
+.dw-contact-modal-overlay.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.dw-contact-modal {
+    background: #ffffff;
+    border-radius: 16px;
+    max-width: 480px;
+    width: 100%;
+    max-height: 90vh;
+    overflow: visible;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    position: relative;
+    animation: dwSlideIn 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.dw-contact-modal-header {
+    padding: 28px 28px 20px 28px;
+    border-bottom: 1px solid #e5e7eb;
+    position: relative;
+    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+    color: #ffffff;
+    border-radius: 16px 16px 0 0;
+    margin: 0;
+}
+
+.dw-contact-modal-header h3 {
+    margin: 0 0 8px 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.dw-contact-modal-header p {
+    margin: 0;
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.95);
+    line-height: 1.6;
+}
+
+.dw-contact-modal-close {
+    position: absolute !important;
+    top: 10px;
+    right: 10px;
+    font-size: 30px !important;
+    float: right;
+    background: transparent !important;
+    color: #ffffff !important;
+    z-index: 10;
+    cursor: pointer !important;
+    width: 40px;
+    height: 40px;
+    border: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    font-weight: 300;
+    line-height: 1;
+}
+
+.dw-contact-modal-close:hover {
+    opacity: 0.8;
+    transform: scale(1.1);
+}
+
+.dw-contact-modal-body {
+    padding: 28px;
+    overflow-y: auto;
+    flex: 1;
+    background: #ffffff;
+}
+
+.dw-contact-form-group {
+    margin-bottom: 22px;
+}
+
+.dw-contact-form-group:last-child {
+    margin-bottom: 0;
+}
+
+.dw-contact-form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.dw-contact-form-group label .required {
+    color: #dc2626;
+    margin-left: 3px;
+}
+
+.dw-contact-form-group input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 15px;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+    background-color: #ffffff;
+    color: #1f2937;
+}
+
+.dw-contact-form-group input:focus {
+    outline: none;
+    border-color: #25d366;
+    box-shadow: 0 0 0 4px rgba(37, 211, 102, 0.1);
+    background-color: #f9fafb;
+}
+
+.dw-contact-form-group input.error {
+    border-color: #ef4444;
+    background-color: #fef2f2;
+}
+
+.dw-contact-form-group .error-message {
+    display: none;
+    margin-top: 8px;
+    font-size: 13px;
+    color: #ef4444;
+    font-weight: 500;
+}
+
+.dw-contact-form-group input.error + .error-message {
+    display: block;
+}
+
+.dw-contact-modal-footer {
+    padding: 20px 28px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    background-color: #f9fafb;
+}
+
+.dw-contact-modal-footer button {
+    padding: 14px 28px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    min-width: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.dw-contact-btn-skip {
+    background-color: #ffffff;
+    color: #25d366;
+    border: 2px solid #25d366;
+}
+
+.dw-contact-btn-skip:hover {
+    background-color: #f0fdf4;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.2);
+}
+
+.dw-contact-btn-submit {
+    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4);
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.dw-contact-btn-submit span {
+    color: #ffffff !important;
+}
+
+.dw-contact-btn-submit:hover {
+    background: linear-gradient(135deg, #1fb854 0%, #0f7a6e 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(37, 211, 102, 0.5);
+    color: #ffffff !important;
+}
+
+.dw-contact-btn-submit:hover span {
+    color: #ffffff !important;
+}
+
+.dw-contact-btn-submit:active {
+    transform: translateY(0);
+}
+
+.dw-contact-btn-submit:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Animações */
+@keyframes dwFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes dwSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Responsivo para o modal */
+@media (max-width: 768px) {
+    .dw-contact-modal-overlay.active {
+        padding: 10px;
+    }
+    
+    .dw-contact-modal {
+        width: 100%;
+        max-height: 95vh;
+        border-radius: 12px;
+    }
+    
+    .dw-contact-modal-header {
+        padding: 24px 24px 18px 24px;
+    }
+    
+    .dw-contact-modal-close {
+        top: -15px;
+        right: -15px;
+        font-size: 28px !important;
+        width: 36px;
+        height: 36px;
+    }
+    
+    .dw-contact-modal-header h3 {
+        font-size: 20px;
+    }
+    
+    .dw-contact-modal-header p {
+        font-size: 14px;
+    }
+    
+    .dw-contact-modal-body {
+        padding: 24px;
+    }
+    
+    .dw-contact-modal-footer {
+        padding: 16px 24px;
+        flex-direction: column;
+    }
+    
+    .dw-contact-modal-footer button {
+        width: 100%;
+        min-width: auto;
+        padding: 14px 24px;
+    }
+    
+    .dw-contact-form-group input {
+        font-size: 16px; /* Evita zoom no iOS */
+        padding: 14px 16px;
     }
 }
 

@@ -46,6 +46,11 @@ class DW_WhatsApp_Frontend {
 			add_action( 'wp_footer', array( $this, 'render_floating_button' ) );
 		}
 
+		// Contact capture modal
+		if ( DW_WhatsApp_Settings::get( 'enable_contact_capture' ) === 'yes' ) {
+			add_action( 'wp_footer', array( $this, 'render_contact_modal' ) );
+		}
+
 		// Scripts - sempre carregar CSS
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 
@@ -64,9 +69,9 @@ class DW_WhatsApp_Frontend {
 			add_action( 'woocommerce_single_product_summary', array( $this, 'render_product_button' ), 999 );
 		}
 
-		// Product loop
+		// Product loop - usar action ao invés de filter para melhor compatibilidade com temas
 		if ( DW_WhatsApp_Settings::get( 'show_on_product_loop' ) === 'yes' ) {
-			add_filter( 'woocommerce_loop_add_to_cart_link', array( $this, 'render_loop_button' ), 999, 2 );
+			add_action( 'woocommerce_after_shop_loop_item', array( $this, 'render_loop_button' ), 15 );
 		}
 
 		// Product hooks
@@ -89,12 +94,14 @@ class DW_WhatsApp_Frontend {
 	 * Enqueue scripts
 	 */
 	public function enqueue_scripts() {
-		// Enqueue CSS - sempre carregar
+		// Enqueue CSS - sempre carregar com versão baseada no timestamp do arquivo para evitar cache
+		$css_file = DW_WHATSAPP_PATH . 'assets/css/frontend.css';
+		$css_version = DW_WHATSAPP_VERSION . '.' . ( file_exists( $css_file ) ? filemtime( $css_file ) : time() );
 		wp_enqueue_style(
 			'dw-whatsapp-frontend',
 			DW_WHATSAPP_URL . 'assets/css/frontend.css',
 			array(),
-			DW_WHATSAPP_VERSION
+			$css_version
 		);
 
 		// Enqueue JS apenas em páginas de produto do WooCommerce (se WooCommerce estiver ativo)
@@ -113,6 +120,17 @@ class DW_WhatsApp_Frontend {
 				'messageTemplateNoPrice'  => DW_WhatsApp_Settings::get( 'message_without_price' ),
 				'includeLink'             => DW_WhatsApp_Settings::get( 'include_product_link' ) === 'yes',
 			) );
+		}
+
+		// Enqueue JS para suporte a quantidade no loop (catálogo/shop)
+		if ( $this->is_woocommerce_active() && DW_WhatsApp_Settings::get( 'show_on_product_loop' ) === 'yes' ) {
+			wp_enqueue_script(
+				'dw-whatsapp-loop-quantity',
+				DW_WHATSAPP_URL . 'assets/js/loop-quantity.js',
+				array( 'jquery' ),
+				DW_WHATSAPP_VERSION,
+				true
+			);
 		}
 	}
 
@@ -207,12 +225,14 @@ class DW_WhatsApp_Frontend {
 
 	/**
 	 * Render loop button
-	 *
-	 * @param string     $html Button HTML.
-	 * @param WC_Product $product Product object.
-	 * @return string
 	 */
-	public function render_loop_button( $html, $product ) {
+	public function render_loop_button() {
+		global $product;
+
+		if ( ! $product || ! is_object( $product ) ) {
+			return;
+		}
+
 		// Buscar atendente do produto
 		$attendant = $this->get_product_attendant( $product );
 		
@@ -235,12 +255,12 @@ class DW_WhatsApp_Frontend {
 
 		$color = esc_attr( DW_WhatsApp_Settings::get( 'button_color', '#25d366' ) );
 
-		$button = '<a href="' . esc_url( $link ) . '" target="_blank" class="dw-whatsapp-button-loop button" style="background-color: ' . $color . '; color: white; width: 100%; text-align: center; display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; border-color: ' . $color . ';">';
-		$button .= $this->get_whatsapp_icon( '15px' );
-		$button .= esc_html( $text );
-		$button .= '</a>';
-
-		return $this->is_product_without_price( $product ) ? $button : $html . $button;
+		echo '<div class="dw-whatsapp-wrapper-loop" style="width: 100%; margin-top: 8px;">';
+		echo '<a href="' . esc_url( $link ) . '" target="_blank" class="dw-whatsapp-button-loop button" style="background-color: ' . $color . '; color: white; width: 100%; text-align: center; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-color: ' . $color . ';">';
+		echo $this->get_whatsapp_icon( '15px' );
+		echo esc_html( $text );
+		echo '</a>';
+		echo '</div>';
 	}
 
 	/**
@@ -1079,6 +1099,344 @@ class DW_WhatsApp_Frontend {
 		);
 		
 		return isset( $positions[ $position ] ) ? $positions[ $position ] : $positions['bottom-right'];
+	}
+
+	/**
+	 * Render contact capture modal
+	 */
+	public function render_contact_modal() {
+		$settings = DW_WhatsApp_Settings::get_settings();
+		$title = esc_html( $settings['contact_capture_title'] ?? 'Antes de continuar' );
+		$subtitle = esc_html( $settings['contact_capture_subtitle'] ?? 'Por favor, preencha seus dados para que possamos atendê-lo melhor:' );
+		$fields = $settings['contact_capture_fields'] ?? array( 'name', 'email', 'phone' );
+		$required = $settings['contact_capture_required'] ?? array( 'name' );
+		$has_required = ! empty( $required );
+
+		$field_labels = array(
+			'name' => 'Nome',
+			'email' => 'E-mail',
+			'phone' => 'Telefone',
+		);
+
+		?>
+		<div id="dw-contact-modal-overlay" class="dw-contact-modal-overlay">
+			<div class="dw-contact-modal">
+				<button type="button" class="dw-contact-modal-close" id="dw-contact-modal-close" aria-label="Fechar">&times;</button>
+				<div class="dw-contact-modal-header">
+					<h3><?php echo $title; ?></h3>
+					<p><?php echo $subtitle; ?></p>
+				</div>
+				<div class="dw-contact-modal-body">
+					<form id="dw-contact-form">
+						<?php foreach ( $fields as $field ) : ?>
+							<?php if ( in_array( $field, array( 'name', 'email', 'phone' ) ) ) : ?>
+								<div class="dw-contact-form-group">
+									<label for="dw-contact-<?php echo esc_attr( $field ); ?>">
+										<?php echo esc_html( $field_labels[ $field ] ); ?>
+										<?php if ( in_array( $field, $required ) ) : ?>
+											<span class="required">*</span>
+										<?php endif; ?>
+									</label>
+									<input 
+										type="<?php echo $field === 'email' ? 'email' : 'text'; ?>" 
+										id="dw-contact-<?php echo esc_attr( $field ); ?>" 
+										name="<?php echo esc_attr( $field ); ?>"
+										<?php echo in_array( $field, $required ) ? 'required' : ''; ?>
+										placeholder="Digite seu <?php echo esc_attr( strtolower( $field_labels[ $field ] ) ); ?>"
+									>
+									<span class="error-message">Por favor, preencha este campo corretamente</span>
+								</div>
+							<?php endif; ?>
+						<?php endforeach; ?>
+					</form>
+				</div>
+				<div class="dw-contact-modal-footer">
+					<?php if ( ! $has_required ) : ?>
+						<button type="button" class="dw-contact-btn-skip" id="dw-contact-btn-skip">
+							<?php echo $this->get_whatsapp_icon( '18px' ); ?>
+							<span>Ir para o WhatsApp</span>
+						</button>
+					<?php endif; ?>
+					<button type="submit" form="dw-contact-form" class="dw-contact-btn-submit" id="dw-contact-btn-submit">
+						<?php echo $this->get_whatsapp_icon( '18px' ); ?>
+						<span>CONTINUAR PARA O WHATSAPP</span>
+					</button>
+				</div>
+			</div>
+		</div>
+		<?php
+		$this->render_contact_modal_script( $has_required );
+	}
+
+	/**
+	 * Render contact modal script
+	 *
+	 * @param bool $has_required Whether form has required fields.
+	 */
+	private function render_contact_modal_script( $has_required = true ) {
+		?>
+		<script>
+		(function() {
+			const modalOverlay = document.getElementById('dw-contact-modal-overlay');
+			const modalClose = document.getElementById('dw-contact-modal-close');
+			const btnSkip = document.getElementById('dw-contact-btn-skip');
+			const btnSubmit = document.getElementById('dw-contact-btn-submit');
+			const form = document.getElementById('dw-contact-form');
+			let pendingWhatsAppUrl = '';
+			const hasRequired = <?php echo $has_required ? 'true' : 'false'; ?>;
+
+			// Interceptar todos os cliques em links do WhatsApp
+			document.addEventListener('click', function(e) {
+				const target = e.target.closest('a[href*="wa.me"], .dw-whatsapp-button, .dw-whatsapp-button-loop, .dw-whatsapp-floating-button, .dw-user-item[data-available="1"]');
+				
+				if (target) {
+					let whatsappUrl = '';
+					
+					// Para itens de usuário do widget
+					if (target.classList.contains('dw-user-item')) {
+						const phone = target.getAttribute('data-phone');
+						const message = target.getAttribute('data-message');
+						if (phone && message) {
+							whatsappUrl = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(message);
+						}
+					} 
+					// Para links normais
+					else if (target.href && target.href.includes('wa.me')) {
+						whatsappUrl = target.href;
+					}
+
+					if (whatsappUrl) {
+						e.preventDefault();
+						e.stopPropagation();
+						pendingWhatsAppUrl = whatsappUrl;
+						openModal();
+						return false;
+					}
+				}
+			}, true);
+
+			// Abrir modal
+			function openModal() {
+				modalOverlay.classList.add('active');
+				document.body.style.overflow = 'hidden';
+				
+				// Focus no primeiro campo
+				setTimeout(() => {
+					const firstInput = form.querySelector('input');
+					if (firstInput) firstInput.focus();
+				}, 300);
+			}
+
+			// Fechar modal
+			function closeModal() {
+				modalOverlay.classList.remove('active');
+				document.body.style.overflow = '';
+				form.reset();
+				clearErrors();
+				pendingWhatsAppUrl = '';
+			}
+
+			// Limpar erros
+			function clearErrors() {
+				const inputs = form.querySelectorAll('input');
+				inputs.forEach(input => {
+					input.classList.remove('error');
+				});
+			}
+
+			// Validar campo
+			function validateField(field) {
+				const value = field.value.trim();
+				const isRequired = field.hasAttribute('required');
+				
+				if (isRequired && !value) {
+					field.classList.add('error');
+					return false;
+				}
+				
+				if (field.type === 'email' && value) {
+					const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+					if (!emailRegex.test(value)) {
+						field.classList.add('error');
+						return false;
+					}
+				}
+				
+				field.classList.remove('error');
+				return true;
+			}
+
+			// Validar formulário
+			function validateForm() {
+				const inputs = form.querySelectorAll('input');
+				let isValid = true;
+				
+				inputs.forEach(input => {
+					if (!validateField(input)) {
+						isValid = false;
+					}
+				});
+				
+				return isValid;
+			}
+
+			// Salvar lead via AJAX
+			function saveLead(contactData, callback) {
+				const formData = new FormData();
+				formData.append('action', 'dw_whatsapp_save_lead');
+				formData.append('nonce', '<?php echo wp_create_nonce( 'dw_whatsapp_save_lead' ); ?>');
+				formData.append('name', contactData.name || '');
+				formData.append('email', contactData.email || '');
+				// Remover máscara do telefone antes de enviar
+				const phoneClean = (contactData.phone || '').replace(/\D/g, '');
+				formData.append('phone', phoneClean);
+
+				fetch('<?php echo admin_url( 'admin-ajax.php' ); ?>', {
+					method: 'POST',
+					body: formData
+				})
+				.then(response => response.json())
+				.then(data => {
+					if (callback) callback(data);
+				})
+				.catch(error => {
+					console.error('Erro ao salvar lead:', error);
+					if (callback) callback({ success: false });
+				});
+			}
+
+			// Abrir WhatsApp
+			function openWhatsApp(url) {
+				window.open(url, '_blank');
+				setTimeout(closeModal, 500);
+			}
+
+			// Botão Skip (quando não há campos obrigatórios)
+			if (btnSkip) {
+				btnSkip.addEventListener('click', function() {
+					// Coletar dados mesmo sem obrigatórios
+					const formData = new FormData(form);
+					const contactData = {};
+					formData.forEach((value, key) => {
+						if (value.trim()) {
+							contactData[key] = value.trim();
+						}
+					});
+
+					// Salvar lead se houver dados
+					if (Object.keys(contactData).length > 0) {
+						saveLead(contactData, function() {
+							openWhatsApp(pendingWhatsAppUrl);
+						});
+					} else {
+						openWhatsApp(pendingWhatsAppUrl);
+					}
+				});
+			}
+
+			// Submit do formulário
+			form.addEventListener('submit', function(e) {
+				e.preventDefault();
+				
+				if (!validateForm()) {
+					return;
+				}
+
+				// Coletar dados
+				const formData = new FormData(form);
+				const contactData = {};
+				formData.forEach((value, key) => {
+					if (value.trim()) {
+						contactData[key] = value.trim();
+					}
+				});
+
+				// Salvar lead
+				saveLead(contactData, function(data) {
+					// Adicionar dados à URL do WhatsApp
+					if (pendingWhatsAppUrl) {
+						let finalUrl = pendingWhatsAppUrl;
+						
+						// Extrair a mensagem atual
+						const urlObj = new URL(pendingWhatsAppUrl);
+						let currentMessage = urlObj.searchParams.get('text') || '';
+						
+						// Adicionar dados de contato à mensagem
+						let contactInfo = '\n\n--- Dados de Contato ---';
+						if (contactData.name) contactInfo += '\nNome: ' + contactData.name;
+						if (contactData.email) contactInfo += '\nE-mail: ' + contactData.email;
+						if (contactData.phone) contactInfo += '\nTelefone: ' + contactData.phone;
+						
+						currentMessage += contactInfo;
+						urlObj.searchParams.set('text', currentMessage);
+						finalUrl = urlObj.toString();
+						
+						// Abrir WhatsApp
+						openWhatsApp(finalUrl);
+					}
+				});
+			});
+
+			// Máscara de telefone brasileiro
+			const phoneInput = form.querySelector('input[name="phone"]');
+			if (phoneInput) {
+				phoneInput.addEventListener('input', function(e) {
+					let value = e.target.value.replace(/\D/g, '');
+					if (value.length <= 11) {
+						if (value.length <= 10) {
+							// Telefone fixo (99) 9999-9999
+							value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+						} else {
+							// Celular (99) 99999-9999
+							value = value.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, '($1) $2-$3');
+						}
+						e.target.value = value;
+					}
+					if (this.classList.contains('error')) {
+						validateField(this);
+					}
+				});
+				
+				phoneInput.addEventListener('blur', function() {
+					validateField(this);
+				});
+			}
+
+			// Validação em tempo real
+			const inputs = form.querySelectorAll('input');
+			inputs.forEach(input => {
+				if (input.name !== 'phone') {
+					input.addEventListener('blur', function() {
+						validateField(this);
+					});
+					
+					input.addEventListener('input', function() {
+						if (this.classList.contains('error')) {
+							validateField(this);
+						}
+					});
+				}
+			});
+
+			// Eventos de fechar
+			modalClose.addEventListener('click', closeModal);
+			
+			// Fechar ao clicar fora
+			modalOverlay.addEventListener('click', function(e) {
+				if (e.target === modalOverlay) {
+					closeModal();
+				}
+			});
+			
+			// Fechar com ESC
+			document.addEventListener('keydown', function(e) {
+				if (e.key === 'Escape' && modalOverlay.classList.contains('active')) {
+					closeModal();
+				}
+			});
+		})();
+		</script>
+		<?php
 	}
 
 	/**

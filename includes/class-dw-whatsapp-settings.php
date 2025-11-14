@@ -120,6 +120,11 @@ class DW_WhatsApp_Settings {
 			'chat_widget_title'          => 'Iniciar Conversa',
 			'chat_widget_subtitle'       => 'Olá! Clique em um dos nossos membros abaixo para conversar no WhatsApp ;)',
 			'chat_widget_availability'   => 'A equipe normalmente responde em alguns minutos.',
+			'enable_contact_capture'     => 'no',
+			'contact_capture_fields'     => array( 'name', 'email', 'phone' ),
+			'contact_capture_required'   => array( 'name' ),
+			'contact_capture_title'      => 'Antes de continuar',
+			'contact_capture_subtitle'   => 'Por favor, preencha seus dados para que possamos atendê-lo melhor:',
 		);
 	}
 
@@ -142,6 +147,7 @@ class DW_WhatsApp_Settings {
 		$sanitized['include_product_link']   = ! empty( $input['include_product_link'] ) ? 'yes' : 'no';
 		$sanitized['include_variations']     = ! empty( $input['include_variations'] ) ? 'yes' : 'no';
 		$sanitized['multi_users_enabled']    = ! empty( $input['multi_users_enabled'] ) ? 'yes' : 'no';
+		$sanitized['enable_contact_capture'] = ! empty( $input['enable_contact_capture'] ) ? 'yes' : 'no';
 
 		// Position
 		$allowed_positions = array( 'bottom-right', 'bottom-left', 'top-right', 'top-left' );
@@ -186,9 +192,33 @@ class DW_WhatsApp_Settings {
 		$sanitized['chat_widget_title']          = isset( $input['chat_widget_title'] ) ? sanitize_text_field( $input['chat_widget_title'] ) : '';
 		$sanitized['chat_widget_subtitle']       = isset( $input['chat_widget_subtitle'] ) ? sanitize_text_field( $input['chat_widget_subtitle'] ) : '';
 		$sanitized['chat_widget_availability']   = isset( $input['chat_widget_availability'] ) ? sanitize_text_field( $input['chat_widget_availability'] ) : '';
+		$sanitized['contact_capture_title']      = isset( $input['contact_capture_title'] ) ? sanitize_text_field( $input['contact_capture_title'] ) : '';
+		$sanitized['contact_capture_subtitle']   = isset( $input['contact_capture_subtitle'] ) ? sanitize_text_field( $input['contact_capture_subtitle'] ) : '';
 
 		// Color
 		$sanitized['button_color'] = isset( $input['button_color'] ) ? sanitize_hex_color( $input['button_color'] ) : '#25d366';
+
+		// Contact capture fields
+		$sanitized['contact_capture_fields'] = array();
+		if ( isset( $input['contact_capture_fields'] ) && is_array( $input['contact_capture_fields'] ) ) {
+			$allowed_fields = array( 'name', 'email', 'phone' );
+			foreach ( $input['contact_capture_fields'] as $field ) {
+				if ( in_array( $field, $allowed_fields ) ) {
+					$sanitized['contact_capture_fields'][] = $field;
+				}
+			}
+		}
+
+		// Contact capture required fields
+		$sanitized['contact_capture_required'] = array();
+		if ( isset( $input['contact_capture_required'] ) && is_array( $input['contact_capture_required'] ) ) {
+			$allowed_fields = array( 'name', 'email', 'phone' );
+			foreach ( $input['contact_capture_required'] as $field ) {
+				if ( in_array( $field, $allowed_fields ) ) {
+					$sanitized['contact_capture_required'][] = $field;
+				}
+			}
+		}
 
 		// Multi users
 		$sanitized['multi_users'] = array();
