@@ -256,7 +256,7 @@ class DW_WhatsApp_Frontend {
 		$color = esc_attr( DW_WhatsApp_Settings::get( 'button_color', '#25d366' ) );
 
 		echo '<div class="dw-whatsapp-wrapper-loop" style="width: 100%; margin-top: 8px;">';
-		echo '<a href="' . esc_url( $link ) . '" target="_blank" class="dw-whatsapp-button-loop button" style="background-color: ' . $color . '; color: white; width: 100%; text-align: center; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-color: ' . $color . ';">';
+		echo '<a href="' . esc_url( $link ) . '" target="_blank" class="dw-whatsapp-button-loop button" style="background-color: ' . $color . '; color: white; width: 100%; text-align: center; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-color: ' . $color . '; border-radius: var(--btn-accented-brd-radius) !important;">';
 		echo $this->get_whatsapp_icon( '15px' );
 		echo esc_html( $text );
 		echo '</a>';
