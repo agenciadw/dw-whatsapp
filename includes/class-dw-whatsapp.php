@@ -52,6 +52,7 @@ class DW_WhatsApp {
 		require_once DW_WHATSAPP_PATH . 'includes/class-dw-whatsapp-settings.php';
 		require_once DW_WHATSAPP_PATH . 'includes/class-dw-whatsapp-schedule.php';
 		require_once DW_WHATSAPP_PATH . 'includes/class-dw-whatsapp-leads.php';
+		require_once DW_WHATSAPP_PATH . 'includes/class-dw-whatsapp-custom-fields.php';
 		require_once DW_WHATSAPP_PATH . 'includes/class-dw-whatsapp-frontend.php';
 		require_once DW_WHATSAPP_PATH . 'admin/class-dw-whatsapp-admin.php';
 		require_once DW_WHATSAPP_PATH . 'admin/class-dw-whatsapp-product.php';

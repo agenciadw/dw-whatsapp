@@ -51,19 +51,23 @@ Plugin WordPress profissional para integração completa do WhatsApp com WooComm
 ### 📋 **Sistema de Captura de Leads**
 - **Captura de dados antes do WhatsApp**: Modal elegante para capturar nome, e-mail e telefone
 - **Campos configuráveis**: Escolha quais campos exibir e quais são obrigatórios
+- **Campos customizados**: Crie campos personalizados (texto, e-mail, telefone, data, número, senha, seleção)
 - **Máscara de telefone brasileiro**: Formatação automática (99) 99999-9999
 - **Validação em tempo real**: Validação de campos obrigatórios e formato de e-mail
 - **Design moderno**: Modal com gradiente verde WhatsApp e animações suaves
 - **Cache busting**: CSS versionado automaticamente para evitar problemas de cache
+- **Integração Google Tag Manager**: Envio automático de dados para dataLayer do GTM
 
 ### 📊 **Gerenciamento de Leads**
 - **Base de dados dedicada**: Tabela customizada para armazenar todos os leads
 - **Detecção de clientes WooCommerce**: Identifica automaticamente se o lead é cliente
 - **Agrupamento inteligente**: Contatos duplicados são agrupados com contador de contatos
 - **Histórico completo**: Primeiro e último contato registrados
-- **Exportação de dados**: Exporte leads em CSV ou Excel com um clique
+- **Visualização detalhada**: Modal popup para ver todos os dados do lead incluindo campos customizados
+- **Exportação completa**: Exporte leads em CSV ou Excel incluindo campos customizados
 - **Busca avançada**: Busque leads por nome, e-mail ou telefone
 - **Paginação**: Navegação fácil através de grandes volumes de leads
+- **Tabela responsiva**: Layout adaptável com redimensionamento de colunas por arraste
 
 ### 🎨 **Interface e Design**
 - **Design responsivo**: Funciona perfeitamente em mobile
@@ -110,6 +114,15 @@ Plugin WordPress profissional para integração completa do WhatsApp com WooComm
 - **Campos obrigatórios**: Defina quais campos são obrigatórios
 - **Título e subtítulo**: Personalize os textos do modal de captura
 - **Máscara automática**: Telefone formatado automaticamente no padrão brasileiro
+
+### 🎨 **Campos Customizados**
+- **Crie campos personalizados**: Adicione quantos campos quiser ao formulário
+- **Tipos de campo**: Texto curto, texto longo, e-mail, telefone, data, número, senha, seleção
+- **Campos obrigatórios**: Defina quais campos são obrigatórios
+- **Exibir no WhatsApp**: Escolha se o campo aparece na mensagem do WhatsApp ou só no banco
+- **Opções de seleção**: Configure opções para campos do tipo seleção
+- **Ordem personalizada**: Defina a ordem de exibição dos campos
+- **Gerenciamento completo**: Interface admin para criar, editar e excluir campos
 
 ### 👥 Sistema de Múltiplos Usuários
 - **Ative o sistema**: Marque "Habilitar múltiplos usuários"
@@ -177,11 +190,28 @@ Plugin WordPress profissional para integração completa do WhatsApp com WooComm
 - **GitHub**: https://github.com/agenciadw/dw-whatsapp
 - **Email**: david@dwdigital.com.br
 
+### 🔗 **Integração Google Tag Manager**
+- **Evento automático**: Envio de evento `whatsapp_lead_capture` para dataLayer
+- **Dados completos**: Nome, e-mail, telefone e todos os campos customizados
+- **Estrutura organizada**: Dados agrupados em `lead_data` e `custom_fields`
+- **Timestamp automático**: Data/hora de captura incluída automaticamente
+- **Versão do widget**: Identificação da versão do plugin nos dados
+
 ## 📄 Licença
 
 GPL v2 ou posterior - https://www.gnu.org/licenses/gpl-2.0.html
 
 ## 🔄 Changelog
+
+### Versão 2.0.1 - 18-11-2025
+- 🎨 **Sistema de Campos Customizados**: Crie campos personalizados no formulário de captura
+- 📋 **Tipos de campo**: Texto curto, texto longo, e-mail, telefone, data, número, senha, seleção
+- ⚙️ **Configurações avançadas**: Defina se o campo é obrigatório e se aparece no WhatsApp
+- 🔗 **Integração Google Tag Manager**: Envio automático de dados para dataLayer do GTM
+- 👁️ **Visualização de Leads**: Modal popup para ver todos os dados do lead
+- 📊 **Exportação melhorada**: Campos customizados incluídos na exportação CSV/Excel
+- 📱 **Tabela responsiva**: Layout adaptável com redimensionamento de colunas por arraste
+- 🎯 **Melhorias na interface**: Botão "Ver Lead" e melhor organização dos dados
 
 ### Versão 2.0.0 - 13-11-2025
 - 🎉 **Lançamento da versão 2.0** com sistema completo de captura e gerenciamento de leads

@@ -1118,6 +1118,9 @@ class DW_WhatsApp_Frontend {
 			'phone' => 'Telefone',
 		);
 
+		// Get custom fields
+		$custom_fields = DW_WhatsApp_Custom_Fields::get_all_fields();
+
 		?>
 		<div id="dw-contact-modal-overlay" class="dw-contact-modal-overlay">
 			<div class="dw-contact-modal">
@@ -1148,6 +1151,59 @@ class DW_WhatsApp_Frontend {
 								</div>
 							<?php endif; ?>
 						<?php endforeach; ?>
+						
+						<?php foreach ( $custom_fields as $custom_field ) : ?>
+							<div class="dw-contact-form-group">
+								<label for="dw-contact-<?php echo esc_attr( $custom_field['field_key'] ); ?>">
+									<?php echo esc_html( $custom_field['field_label'] ); ?>
+									<?php if ( $custom_field['is_required'] ) : ?>
+										<span class="required">*</span>
+									<?php endif; ?>
+								</label>
+								<?php
+								$field_type = $custom_field['field_type'];
+								$field_key = $custom_field['field_key'];
+								$field_id = 'dw-contact-' . esc_attr( $field_key );
+								$field_name = esc_attr( $field_key );
+								$is_required = $custom_field['is_required'] ? 'required' : '';
+								
+								if ( $field_type === 'textarea' ) :
+								?>
+									<textarea 
+										id="<?php echo $field_id; ?>" 
+										name="<?php echo $field_name; ?>"
+										<?php echo $is_required; ?>
+										rows="4"
+										placeholder="Digite <?php echo esc_attr( strtolower( $custom_field['field_label'] ) ); ?>"
+									></textarea>
+								<?php elseif ( $field_type === 'select' ) : 
+									$options = json_decode( $custom_field['field_options'], true );
+									if ( ! is_array( $options ) ) {
+										$options = array();
+									}
+								?>
+									<select 
+										id="<?php echo $field_id; ?>" 
+										name="<?php echo $field_name; ?>"
+										<?php echo $is_required; ?>
+									>
+										<option value="">Selecione...</option>
+										<?php foreach ( $options as $option ) : ?>
+											<option value="<?php echo esc_attr( $option ); ?>"><?php echo esc_html( $option ); ?></option>
+										<?php endforeach; ?>
+									</select>
+								<?php else : ?>
+									<input 
+										type="<?php echo esc_attr( $field_type ); ?>" 
+										id="<?php echo $field_id; ?>" 
+										name="<?php echo $field_name; ?>"
+										<?php echo $is_required; ?>
+										placeholder="Digite <?php echo esc_attr( strtolower( $custom_field['field_label'] ) ); ?>"
+									>
+								<?php endif; ?>
+								<span class="error-message">Por favor, preencha este campo corretamente</span>
+							</div>
+						<?php endforeach; ?>
 					</form>
 				</div>
 				<div class="dw-contact-modal-footer">
@@ -1165,15 +1221,16 @@ class DW_WhatsApp_Frontend {
 			</div>
 		</div>
 		<?php
-		$this->render_contact_modal_script( $has_required );
+		$this->render_contact_modal_script( $has_required, $custom_fields );
 	}
 
 	/**
 	 * Render contact modal script
 	 *
-	 * @param bool $has_required Whether form has required fields.
+	 * @param bool  $has_required Whether form has required fields.
+	 * @param array $custom_fields Custom fields array.
 	 */
-	private function render_contact_modal_script( $has_required = true ) {
+	private function render_contact_modal_script( $has_required = true, $custom_fields = array() ) {
 		?>
 		<script>
 		(function() {
@@ -1184,6 +1241,18 @@ class DW_WhatsApp_Frontend {
 			const form = document.getElementById('dw-contact-form');
 			let pendingWhatsAppUrl = '';
 			const hasRequired = <?php echo $has_required ? 'true' : 'false'; ?>;
+			
+			// Custom fields configuration
+			const customFieldsConfig = <?php 
+				$fields_config = array();
+				foreach ( $custom_fields as $field ) {
+					$fields_config[ $field['field_key'] ] = array(
+						'label' => $field['field_label'],
+						'show_in_whatsapp' => (bool) $field['show_in_whatsapp'],
+					);
+				}
+				echo json_encode( $fields_config );
+			?>;
 
 			// Interceptar todos os cliques em links do WhatsApp
 			document.addEventListener('click', function(e) {
@@ -1238,7 +1307,7 @@ class DW_WhatsApp_Frontend {
 
 			// Limpar erros
 			function clearErrors() {
-				const inputs = form.querySelectorAll('input');
+				const inputs = form.querySelectorAll('input, textarea, select');
 				inputs.forEach(input => {
 					input.classList.remove('error');
 				});
@@ -1268,7 +1337,7 @@ class DW_WhatsApp_Frontend {
 
 			// Validar formulário
 			function validateForm() {
-				const inputs = form.querySelectorAll('input');
+				const inputs = form.querySelectorAll('input, textarea, select');
 				let isValid = true;
 				
 				inputs.forEach(input => {
@@ -1290,6 +1359,13 @@ class DW_WhatsApp_Frontend {
 				// Remover máscara do telefone antes de enviar
 				const phoneClean = (contactData.phone || '').replace(/\D/g, '');
 				formData.append('phone', phoneClean);
+				
+				// Adicionar campos customizados
+				Object.keys(contactData).forEach(key => {
+					if (key !== 'name' && key !== 'email' && key !== 'phone' && customFieldsConfig[key]) {
+						formData.append(key, contactData[key] || '');
+					}
+				});
 
 				fetch('<?php echo admin_url( 'admin-ajax.php' ); ?>', {
 					method: 'POST',
@@ -1311,6 +1387,44 @@ class DW_WhatsApp_Frontend {
 				setTimeout(closeModal, 500);
 			}
 
+			// Enviar dados para Google Tag Manager
+			function enviarParaDataLayer(nome, email, telefone, customFields) {
+				window.dataLayer = window.dataLayer || [];
+
+				const leadData = {
+					'name': nome || '',
+					'email': email || '',
+					'phone': telefone || '',
+					'timestamp': new Date().toISOString(),
+					'widget_version': '1.0'
+				};
+				
+				// Adicionar campos customizados
+				const customFieldsData = {};
+				if (customFields && Object.keys(customFields).length > 0) {
+					Object.keys(customFields).forEach(key => {
+						if (customFields[key]) {
+							// Adicionar no objeto principal para facilitar acesso
+							leadData[key] = customFields[key];
+							// Também adicionar em objeto separado para organização
+							customFieldsData[key] = customFields[key];
+						}
+					});
+					
+					// Adicionar objeto com todos os campos customizados
+					if (Object.keys(customFieldsData).length > 0) {
+						leadData['custom_fields'] = customFieldsData;
+					}
+				}
+
+				window.dataLayer.push({
+					'event': 'whatsapp_lead_capture',
+					'lead_data': leadData
+				});
+
+				console.log('Lead enviado para dataLayer:', leadData);
+			}
+
 			// Botão Skip (quando não há campos obrigatórios)
 			if (btnSkip) {
 				btnSkip.addEventListener('click', function() {
@@ -1325,7 +1439,18 @@ class DW_WhatsApp_Frontend {
 
 					// Salvar lead se houver dados
 					if (Object.keys(contactData).length > 0) {
-						saveLead(contactData, function() {
+						saveLead(contactData, function(data) {
+							// Remover máscara do telefone antes de enviar para GTM
+							const phoneClean = (contactData.phone || '').replace(/\D/g, '');
+							// Separar campos customizados
+							const customFields = {};
+							Object.keys(contactData).forEach(key => {
+								if (key !== 'name' && key !== 'email' && key !== 'phone' && customFieldsConfig[key]) {
+									customFields[key] = contactData[key];
+								}
+							});
+							// Enviar para Google Tag Manager
+							enviarParaDataLayer(contactData.name, contactData.email, phoneClean, customFields);
 							openWhatsApp(pendingWhatsAppUrl);
 						});
 					} else {
@@ -1353,6 +1478,18 @@ class DW_WhatsApp_Frontend {
 
 				// Salvar lead
 				saveLead(contactData, function(data) {
+					// Remover máscara do telefone antes de enviar para GTM
+					const phoneClean = (contactData.phone || '').replace(/\D/g, '');
+					// Separar campos customizados
+					const customFields = {};
+					Object.keys(contactData).forEach(key => {
+						if (key !== 'name' && key !== 'email' && key !== 'phone' && customFieldsConfig[key]) {
+							customFields[key] = contactData[key];
+						}
+					});
+					// Enviar para Google Tag Manager
+					enviarParaDataLayer(contactData.name, contactData.email, phoneClean, customFields);
+					
 					// Adicionar dados à URL do WhatsApp
 					if (pendingWhatsAppUrl) {
 						let finalUrl = pendingWhatsAppUrl;
@@ -1367,6 +1504,13 @@ class DW_WhatsApp_Frontend {
 						if (contactData.email) contactInfo += '\nE-mail: ' + contactData.email;
 						if (contactData.phone) contactInfo += '\nTelefone: ' + contactData.phone;
 						
+						// Adicionar campos customizados que devem aparecer no WhatsApp
+						Object.keys(customFields).forEach(key => {
+							if (customFieldsConfig[key] && customFieldsConfig[key].show_in_whatsapp && customFields[key]) {
+								contactInfo += '\n' + customFieldsConfig[key].label + ': ' + customFields[key];
+							}
+						});
+						
 						currentMessage += contactInfo;
 						urlObj.searchParams.set('text', currentMessage);
 						finalUrl = urlObj.toString();
@@ -1378,8 +1522,8 @@ class DW_WhatsApp_Frontend {
 			});
 
 			// Máscara de telefone brasileiro
-			const phoneInput = form.querySelector('input[name="phone"]');
-			if (phoneInput) {
+			const phoneInputs = form.querySelectorAll('input[name="phone"], input[type="tel"]');
+			phoneInputs.forEach(function(phoneInput) {
 				phoneInput.addEventListener('input', function(e) {
 					let value = e.target.value.replace(/\D/g, '');
 					if (value.length <= 11) {
@@ -1400,10 +1544,10 @@ class DW_WhatsApp_Frontend {
 				phoneInput.addEventListener('blur', function() {
 					validateField(this);
 				});
-			}
+			});
 
 			// Validação em tempo real
-			const inputs = form.querySelectorAll('input');
+			const inputs = form.querySelectorAll('input, textarea, select');
 			inputs.forEach(input => {
 				if (input.name !== 'phone') {
 					input.addEventListener('blur', function() {
@@ -1415,6 +1559,12 @@ class DW_WhatsApp_Frontend {
 							validateField(this);
 						}
 					});
+					
+					if (input.tagName === 'SELECT') {
+						input.addEventListener('change', function() {
+							validateField(this);
+						});
+					}
 				}
 			});
 

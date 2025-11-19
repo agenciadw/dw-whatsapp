@@ -5,6 +5,41 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
 e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [2.0.1] - 2025-11-18
+
+### Adicionado
+- **Sistema de Campos Customizados**: Crie campos personalizados no formulário de captura de leads
+- **Interface de gerenciamento**: Página admin dedicada para criar, editar e excluir campos customizados
+- **Tipos de campo suportados**: Texto curto, texto longo, e-mail, telefone, data, número, senha, seleção
+- **Configurações por campo**: Defina se o campo é obrigatório e se aparece na mensagem do WhatsApp
+- **Opções de seleção**: Configure múltiplas opções para campos do tipo seleção (uma por linha)
+- **Ordem personalizada**: Defina a ordem de exibição dos campos no formulário
+- **Integração Google Tag Manager**: Envio automático de dados para dataLayer do GTM
+- **Evento GTM**: Evento `whatsapp_lead_capture` com todos os dados do lead
+- **Modal de visualização**: Botão "Ver Lead" que abre popup com todos os dados do lead
+- **Campos customizados na exportação**: Campos personalizados incluídos como colunas na exportação CSV/Excel
+- **Tabela responsiva**: Layout adaptável para dispositivos móveis
+- **Redimensionamento de colunas**: Arraste e redimensione colunas da tabela de leads
+- **Layout mobile**: Tabela se transforma em cards em telas pequenas
+
+### Melhorado
+- **Exportação de leads**: Agora inclui todos os campos customizados como colunas adicionais
+- **DataLayer do GTM**: Estrutura melhorada com campos customizados agrupados
+- **Interface de leads**: Tabela mais funcional e responsiva
+- **Experiência do usuário**: Visualização rápida de todos os dados do lead sem sair da página
+- **Organização de dados**: Campos customizados exibidos em seção separada no modal
+
+### Técnico
+- Criada classe `DW_WhatsApp_Custom_Fields` para gerenciamento de campos customizados
+- Tabela `wp_dw_whatsapp_custom_fields` para armazenar configurações dos campos
+- Tabela `wp_dw_whatsapp_lead_fields` para armazenar valores dos campos por lead
+- Método `get_lead_fields_by_contact()` para buscar campos do lead mais recente
+- AJAX handler `ajax_get_lead_details()` para buscar dados completos do lead
+- Função JavaScript `enviarParaDataLayer()` para integração com GTM
+- CSS responsivo para tabela com media queries
+- JavaScript para redimensionamento de colunas com drag & drop
+- Atributos `data-label` nos `<td>` para layout mobile
+
 ## [2.0.0] - 2025-11-13
 
 ### Adicionado
