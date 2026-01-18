@@ -5,6 +5,14 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
 e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [2.0.2] - 2026-01-17
+
+### Corrigido
+- **Compatibilidade com WooCommerce Bookings**: produtos do tipo Booking não são mais tratados como “sem preço”, evitando ocultar o calendário e o cálculo por pessoas/participantes.
+
+### Técnico
+- Atualizado `DW_WhatsApp_Frontend` para detectar produto `booking` e não aplicar as regras de “sem preço” (ex.: `woocommerce_is_purchasable`, `woocommerce_get_price_html`, remoção do add-to-cart).
+
 ## [2.0.1] - 2025-11-18
 
 ### Adicionado

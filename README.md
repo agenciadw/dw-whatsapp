@@ -203,6 +203,9 @@ GPL v2 ou posterior - https://www.gnu.org/licenses/gpl-2.0.html
 
 ## 🔄 Changelog
 
+### Versão 2.0.2 - 17-01-2026
+- 🗓️ **Compatibilidade com WooCommerce Bookings**: Produtos Booking não entram mais na regra de “produto sem preço”, preservando calendário e cálculo por pessoas.
+
 ### Versão 2.0.1 - 18-11-2025
 - 🎨 **Sistema de Campos Customizados**: Crie campos personalizados no formulário de captura
 - 📋 **Tipos de campo**: Texto curto, texto longo, e-mail, telefone, data, número, senha, seleção
