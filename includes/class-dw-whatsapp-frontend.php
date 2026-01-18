@@ -144,6 +144,8 @@ class DW_WhatsApp_Frontend {
 			return;
 		}
 
+		// IMPORTANTE: não remover o add-to-cart em produtos do WooCommerce Bookings,
+		// pois isso pode ocultar o calendário/formulário do Bookings.
 		if ( $this->is_product_without_price( $product ) ) {
 			remove_action( 'woocommerce_single_product_summary', 'woocommerce_template_single_add_to_cart', 30 );
 		}
@@ -628,9 +630,39 @@ class DW_WhatsApp_Frontend {
 			return false;
 		}
 
+		// WooCommerce Bookings: o preço pode ser calculado dinamicamente (data/pessoas),
+		// então não devemos tratar como "sem preço" para evitar quebrar o calendário.
+		if ( $this->is_booking_product( $product ) ) {
+			return false;
+		}
+
 		$price = $product->get_price();
 
 		return ( '' === $price || null === $price || 0 == $price || '0' === $price );
+	}
+
+	/**
+	 * Detecta se o produto é do tipo Booking (WooCommerce Bookings).
+	 *
+	 * @param WC_Product $product Product object.
+	 * @return bool
+	 */
+	private function is_booking_product( $product ) {
+		if ( ! is_object( $product ) ) {
+			return false;
+		}
+
+		// Forma mais comum: tipo de produto "booking".
+		if ( method_exists( $product, 'is_type' ) && $product->is_type( 'booking' ) ) {
+			return true;
+		}
+
+		// Fallback por classe, quando disponível.
+		if ( class_exists( 'WC_Product_Booking' ) && ( $product instanceof WC_Product_Booking ) ) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
