@@ -72,6 +72,10 @@ class DW_WhatsApp_Frontend {
 		// Product loop - usar action ao invés de filter para melhor compatibilidade com temas
 		if ( DW_WhatsApp_Settings::get( 'show_on_product_loop' ) === 'yes' ) {
 			add_action( 'woocommerce_after_shop_loop_item', array( $this, 'render_loop_button' ), 15 );
+
+			// No loop (categorias/loja): se o produto estiver "sem preço", ocultar o botão padrão
+			// (add-to-cart / solicitar orçamento do tema) e deixar apenas o botão do WhatsApp.
+			add_filter( 'woocommerce_loop_add_to_cart_link', array( $this, 'maybe_hide_loop_add_to_cart_link' ), 1000, 3 );
 		}
 
 		// Product hooks
@@ -79,6 +83,18 @@ class DW_WhatsApp_Frontend {
 		add_filter( 'woocommerce_get_price_html', array( $this, 'modify_price_html' ), 1000, 2 );
 		add_filter( 'woocommerce_variable_sale_price_html', array( $this, 'modify_price_html' ), 1000, 2 );
 		add_filter( 'woocommerce_variable_price_html', array( $this, 'modify_price_html' ), 1000, 2 );
+
+		// Checkout via WhatsApp (Carrinho)
+		if ( DW_WhatsApp_Settings::get( 'enable_whatsapp_checkout' ) === 'yes' ) {
+			add_action( 'woocommerce_proceed_to_checkout', array( $this, 'render_cart_whatsapp_checkout_button' ), 25 );
+			add_action( 'template_redirect', array( $this, 'handle_whatsapp_quote_request' ) );
+
+			// Se configurado, ocultar checkout padrão no carrinho e bloquear a página de checkout
+			if ( DW_WhatsApp_Settings::get( 'show_default_checkout_button' ) !== 'yes' ) {
+				remove_action( 'woocommerce_proceed_to_checkout', 'woocommerce_button_proceed_to_checkout', 20 );
+				add_action( 'template_redirect', array( $this, 'maybe_block_checkout_page' ) );
+			}
+		}
 	}
 
 	/**
@@ -617,6 +633,333 @@ class DW_WhatsApp_Frontend {
 			return '<span class="dw-price-request-quote" style="color: #d63638; font-weight: bold; font-size: 16px;">Solicite um orçamento</span>';
 		}
 		return $price;
+	}
+
+	/**
+	 * Oculta o botão padrão do WooCommerce no loop quando o produto estiver sem preço.
+	 *
+	 * @param string     $link Add to cart link HTML.
+	 * @param WC_Product $product Product object.
+	 * @param array      $args Args.
+	 * @return string
+	 */
+	public function maybe_hide_loop_add_to_cart_link( $link, $product, $args ) {
+		if ( $this->is_product_without_price( $product ) ) {
+			return '';
+		}
+		return $link;
+	}
+
+	/**
+	 * Render "Finalizar compra pelo WhatsApp" button on cart.
+	 */
+	public function render_cart_whatsapp_checkout_button() {
+		if ( ! function_exists( 'is_cart' ) || ! is_cart() ) {
+			return;
+		}
+		if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+			return;
+		}
+		if ( WC()->cart->is_empty() ) {
+			return;
+		}
+
+		$text = DW_WhatsApp_Settings::get( 'whatsapp_checkout_button_text', 'Finalizar compra pelo WhatsApp' );
+		$color = esc_attr( DW_WhatsApp_Settings::get( 'button_color', '#25d366' ) );
+
+		$url = add_query_arg(
+			array(
+				'dw_whatsapp_quote' => 1,
+				'_wpnonce'          => wp_create_nonce( 'dw_whatsapp_quote' ),
+			),
+			wc_get_cart_url()
+		);
+
+		echo '<a href="' . esc_url( $url ) . '" target="_blank" rel="noopener noreferrer" class="button alt dw-whatsapp-checkout-button" style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin-top: 10px; padding: 14px 16px; background-color: ' . $color . '; border-color: ' . $color . '; color: #fff; text-decoration: none;">';
+		echo $this->get_whatsapp_icon();
+		echo '<span>' . esc_html( $text ) . '</span>';
+		echo '</a>';
+	}
+
+	/**
+	 * Handle quote request and redirect to WhatsApp.
+	 */
+	public function handle_whatsapp_quote_request() {
+		if ( ! isset( $_GET['dw_whatsapp_quote'] ) ) {
+			return;
+		}
+		if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+			return;
+		}
+		if ( WC()->cart->is_empty() ) {
+			return;
+		}
+		if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( $_GET['_wpnonce'] ), 'dw_whatsapp_quote' ) ) {
+			return;
+		}
+
+		$phone = preg_replace( '/[^0-9]/', '', DW_WhatsApp_Settings::get( 'phone_number' ) );
+		if ( empty( $phone ) ) {
+			return;
+		}
+
+		// Ensure totals are calculated
+		WC()->cart->calculate_totals();
+
+		$snapshot = $this->get_cart_snapshot();
+		$quote_id = DW_WhatsApp_Quotes::save_quote( $snapshot['db'] );
+
+		$message = $this->build_cart_whatsapp_message( $snapshot, $quote_id );
+		$wa_url = 'https://wa.me/' . $phone . '?text=' . rawurlencode( $message );
+
+		/**
+		 * IMPORTANTE:
+		 * `wp_redirect()` / `wp_sanitize_redirect()` pode remover %0A/%0D (quebras de linha)
+		 * por segurança, o que quebra a formatação da mensagem no WhatsApp.
+		 * Aqui usamos header direto para preservar a URL já codificada.
+		 */
+		nocache_headers();
+		header( 'Location: ' . $wa_url, true, 302 );
+		exit;
+	}
+
+	/**
+	 * Block checkout page when configured to hide default checkout.
+	 */
+	public function maybe_block_checkout_page() {
+		if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) {
+			return;
+		}
+		if ( function_exists( 'is_wc_endpoint_url' ) && ( is_wc_endpoint_url( 'order-received' ) || is_wc_endpoint_url( 'order-pay' ) ) ) {
+			return;
+		}
+
+		if ( function_exists( 'wc_add_notice' ) ) {
+			wc_add_notice( 'O checkout está desativado. Finalize sua compra pelo WhatsApp.', 'notice' );
+		}
+		wp_safe_redirect( wc_get_cart_url() );
+		exit;
+	}
+
+	/**
+	 * Build snapshot of current cart for DB and WhatsApp message.
+	 *
+	 * @return array
+	 */
+	private function get_cart_snapshot() {
+		$items_lines = array();
+		$items_db = array();
+
+		foreach ( WC()->cart->get_cart() as $cart_item ) {
+			/** @var WC_Product $product */
+			$product = $cart_item['data'] ?? null;
+			if ( ! $product || ! is_object( $product ) ) {
+				continue;
+			}
+
+			$name = $product->get_name();
+			$qty = (int) ( $cart_item['quantity'] ?? 0 );
+
+			$meta_txt = '';
+			if ( function_exists( 'wc_get_formatted_cart_item_data' ) ) {
+				$meta_html = wc_get_formatted_cart_item_data( $cart_item, true );
+				$meta_txt = trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $meta_html ) ) );
+			}
+			if ( $meta_txt ) {
+				$name .= ' (' . $meta_txt . ')';
+			}
+
+			$line_total_html = WC()->cart->get_product_subtotal( $product, $qty );
+			$line_total_txt = $this->normalize_text( wp_strip_all_tags( $line_total_html ) );
+
+			$items_lines[] = '- ' . $name . ' x' . $qty . ' — ' . $line_total_txt;
+			$items_db[] = array(
+				'product_id'   => $product->get_id(),
+				'variation_id' => absint( $cart_item['variation_id'] ?? 0 ),
+				'name'         => $name,
+				'qty'          => $qty,
+				'line_total'   => $line_total_txt,
+			);
+		}
+
+		$currency = function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : '';
+
+		// Totais numéricos e formatação em texto (sem HTML/entities) para WhatsApp
+		$subtotal_num = isset( WC()->cart->subtotal ) ? (float) WC()->cart->subtotal : (float) WC()->cart->get_subtotal();
+		$shipping_num = (float) WC()->cart->get_shipping_total();
+		$discount_num = (float) WC()->cart->get_discount_total();
+		$total_num = isset( WC()->cart->total ) ? (float) WC()->cart->total : 0.0;
+
+		$subtotal = $this->format_money_plain( $subtotal_num, $currency );
+		$shipping = $this->format_money_plain( $shipping_num, $currency );
+		$discount = $this->format_money_plain( $discount_num, $currency );
+		$total = $this->format_money_plain( $total_num, $currency );
+
+		$customer_name = '';
+		$customer_email = '';
+		$customer_phone = '';
+		if ( function_exists( 'WC' ) && WC()->customer ) {
+			$customer_name = trim( WC()->customer->get_first_name() . ' ' . WC()->customer->get_last_name() );
+			$customer_email = WC()->customer->get_email();
+			$customer_phone = WC()->customer->get_billing_phone();
+		}
+
+		$cart_url = function_exists( 'wc_get_cart_url' ) ? wc_get_cart_url() : home_url( '/' );
+
+		$totals_arr = array(
+			'subtotal' => $subtotal,
+			'shipping' => $shipping !== '' ? $shipping : '0',
+			'discount' => $discount !== '' ? $discount : '0',
+			'total'    => $total,
+		);
+
+		$db = array(
+			'user_id'        => get_current_user_id() ?: null,
+			'customer_name'  => $customer_name,
+			'customer_email' => $customer_email,
+			'customer_phone' => $customer_phone,
+			'cart_contents'  => wp_json_encode( array( 'items' => $items_db, 'cart_url' => $cart_url ) ),
+			'totals'         => wp_json_encode( $totals_arr ),
+			'currency'       => $currency,
+			'ip'             => isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '',
+			'user_agent'     => isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '',
+		);
+
+		return array(
+			'items_lines' => $items_lines,
+			'totals'      => $totals_arr,
+			'cart_url'    => $cart_url,
+			'db'          => $db,
+		);
+	}
+
+	/**
+	 * Build WhatsApp message from template.
+	 *
+	 * @param array    $snapshot Cart snapshot.
+	 * @param int|bool $quote_id Quote ID.
+	 * @return string
+	 */
+	private function build_cart_whatsapp_message( $snapshot, $quote_id ) {
+		$template = DW_WhatsApp_Settings::get( 'whatsapp_checkout_message', '' );
+		if ( $template === '' ) {
+			$template = "Olá! Gostaria de finalizar minha compra via WhatsApp.\n\nCotação #{quote_id}\n\nItens:\n\n{cart_items}\n\nSubtotal: {subtotal}\nFrete: {shipping}\nDescontos: {discount}\nTotal: {total}";
+		}
+
+		// Normalizar template (garantir \n reais + remover HTML + decodificar entities)
+		$template = $this->normalize_text( $template );
+
+		$replacements = array(
+			'{quote_id}'   => $quote_id ? (string) $quote_id : '',
+			'{cart_items}' => ! empty( $snapshot['items_lines'] ) ? implode( "\n", $snapshot['items_lines'] ) : '-',
+			'{subtotal}'   => $snapshot['totals']['subtotal'] ?? '',
+			'{shipping}'   => $snapshot['totals']['shipping'] ?? '',
+			'{discount}'   => $snapshot['totals']['discount'] ?? '',
+			'{total}'      => $snapshot['totals']['total'] ?? '',
+			'{cart_url}'   => $snapshot['cart_url'] ?? '',
+		);
+
+		$msg = str_replace( array_keys( $replacements ), array_values( $replacements ), $template );
+		$msg = $this->normalize_text( $msg );
+		$msg = preg_replace( "/\n{3,}/", "\n\n", $msg );
+
+		// Fallback: se por algum motivo a mensagem ficar sem quebras de linha,
+		// gerar um formato padrão bem legível (WhatsApp-friendly).
+		if ( strpos( $msg, "\n" ) === false ) {
+			$msg = $this->build_default_cart_message( $snapshot, $quote_id );
+		}
+
+		// Remover linha "Link do carrinho" se estiver presente (pedido do cliente)
+		$msg = preg_replace( "/\n*Link do carrinho:\s*.*$/i", "", $msg );
+
+		return trim( $msg );
+	}
+
+	/**
+	 * Mensagem padrão do carrinho (formatada) para WhatsApp.
+	 *
+	 * @param array    $snapshot Cart snapshot.
+	 * @param int|bool $quote_id Quote ID.
+	 * @return string
+	 */
+	private function build_default_cart_message( $snapshot, $quote_id ) {
+		$lines = array();
+		$lines[] = 'Olá! Gostaria de finalizar minha compra via WhatsApp.';
+		$lines[] = '';
+		$lines[] = 'Cotação #' . ( $quote_id ? (string) $quote_id : '' );
+		$lines[] = '';
+		$lines[] = 'Itens:';
+		$lines[] = '';
+
+		if ( ! empty( $snapshot['items_lines'] ) ) {
+			foreach ( $snapshot['items_lines'] as $item_line ) {
+				$lines[] = $this->normalize_text( $item_line );
+			}
+		} else {
+			$lines[] = '-';
+		}
+
+		$lines[] = '';
+		$lines[] = 'Subtotal: ' . ( $snapshot['totals']['subtotal'] ?? '' );
+		$lines[] = 'Frete: ' . ( $snapshot['totals']['shipping'] ?? '' );
+		$lines[] = 'Descontos: ' . ( $snapshot['totals']['discount'] ?? '' );
+		$lines[] = 'Total: ' . ( $snapshot['totals']['total'] ?? '' );
+		$lines[] = '';
+
+		$msg = implode( "\n", $lines );
+		$msg = $this->normalize_text( $msg );
+		$msg = preg_replace( "/\n{3,}/", "\n\n", $msg );
+		return trim( $msg );
+	}
+
+	/**
+	 * Normaliza texto para WhatsApp:
+	 * - converte <br> e <p> em quebras de linha
+	 * - remove HTML
+	 * - decodifica entities (&nbsp;, &#82;&#36;, etc.)
+	 * - normaliza CRLF para LF e colapsa espaços
+	 *
+	 * @param string $text Raw text.
+	 * @return string
+	 */
+	private function normalize_text( $text ) {
+		if ( ! is_string( $text ) ) {
+			return '';
+		}
+
+		// HTML -> \n
+		$text = preg_replace( '/<\s*br\s*\/?>/i', "\n", $text );
+		$text = preg_replace( '/<\/\s*p\s*>/i', "\n", $text );
+		$text = wp_strip_all_tags( $text );
+
+		// Entities -> chars
+		$text = html_entity_decode( $text, ENT_QUOTES, 'UTF-8' );
+		$text = str_replace( "\xC2\xA0", ' ', $text ); // nbsp
+
+		// Normalizar quebras de linha
+		$text = str_replace( array( "\r\n", "\r" ), "\n", $text );
+
+		// Limpar espaços ao redor de quebras e excesso
+		$text = preg_replace( "/[ \t]+\n/", "\n", $text );
+		$text = preg_replace( "/\n[ \t]+/", "\n", $text );
+		$text = preg_replace( "/[ \t]{2,}/", " ", $text );
+
+		return trim( $text );
+	}
+
+	/**
+	 * Formata valor monetário como texto simples (sem HTML) para WhatsApp.
+	 *
+	 * @param float  $amount Amount numeric.
+	 * @param string $currency Currency code.
+	 * @return string
+	 */
+	private function format_money_plain( $amount, $currency = '' ) {
+		if ( function_exists( 'wc_price' ) ) {
+			$price_html = wc_price( $amount, array( 'currency' => $currency ) );
+			return $this->normalize_text( $price_html );
+		}
+		return $this->normalize_text( (string) $amount );
 	}
 
 	/**

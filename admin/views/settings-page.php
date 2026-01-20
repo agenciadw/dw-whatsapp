@@ -62,6 +62,56 @@ $hidden_pages = isset( $settings['floating_button_hide_pages'] ) ? $settings['fl
 					</fieldset>
 				</td>
 			</tr>
+
+			<?php if ( class_exists( 'WooCommerce' ) ) : ?>
+			<!-- WhatsApp Checkout -->
+			<tr>
+				<th colspan="2"><h2>🛒 Finalizar Venda via WhatsApp (Carrinho)</h2></th>
+			</tr>
+
+			<tr>
+				<th scope="row">Ativar Finalizar via WhatsApp</th>
+				<td>
+					<fieldset>
+						<label>
+							<input type="checkbox" name="dw_whatsapp_settings[enable_whatsapp_checkout]" value="yes" <?php checked( $settings['enable_whatsapp_checkout'] ?? 'no', 'yes' ); ?>>
+							Exibir botão “Finalizar compra pelo WhatsApp” na página do carrinho
+						</label>
+						<p class="description">Quando ativado, o cliente poderá enviar os itens do carrinho para o WhatsApp e uma cotação será salva no site.</p>
+					</fieldset>
+				</td>
+			</tr>
+
+			<tr>
+				<th scope="row">Checkout padrão do WooCommerce</th>
+				<td>
+					<fieldset>
+						<label>
+							<input type="checkbox" name="dw_whatsapp_settings[show_default_checkout_button]" value="yes" <?php checked( $settings['show_default_checkout_button'] ?? 'yes', 'yes' ); ?>>
+							Manter o botão padrão “Finalizar compra” (checkout) no carrinho
+						</label>
+						<p class="description">Desmarque para ocultar o botão padrão no carrinho e bloquear o acesso à página de checkout.</p>
+					</fieldset>
+				</td>
+			</tr>
+
+			<tr>
+				<th scope="row"><label for="whatsapp_checkout_button_text">Texto do Botão (Carrinho)</label></th>
+				<td>
+					<input type="text" id="whatsapp_checkout_button_text" name="dw_whatsapp_settings[whatsapp_checkout_button_text]" value="<?php echo esc_attr( $settings['whatsapp_checkout_button_text'] ?? 'Finalizar compra pelo WhatsApp' ); ?>" class="regular-text">
+				</td>
+			</tr>
+
+			<tr>
+				<th scope="row"><label for="whatsapp_checkout_message">Mensagem do WhatsApp (Carrinho)</label></th>
+				<td>
+					<textarea id="whatsapp_checkout_message" name="dw_whatsapp_settings[whatsapp_checkout_message]" rows="8" class="large-text"><?php echo esc_textarea( $settings['whatsapp_checkout_message'] ?? '' ); ?></textarea>
+					<p class="description">
+						Placeholders disponíveis: <code>{quote_id}</code>, <code>{cart_items}</code>, <code>{subtotal}</code>, <code>{shipping}</code>, <code>{discount}</code>, <code>{total}</code>
+					</p>
+				</td>
+			</tr>
+			<?php endif; ?>
 			
 			<tr>
 				<th scope="row"><label>Posição do Botão Flutuante</label></th>

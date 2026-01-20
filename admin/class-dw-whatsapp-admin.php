@@ -65,6 +65,15 @@ class DW_WhatsApp_Admin {
 			'dw-whatsapp-leads',
 			array( $this, 'render_leads_page' )
 		);
+
+		add_submenu_page(
+			'dw-whatsapp',
+			'Cotações',
+			'Cotações',
+			'manage_options',
+			'dw-whatsapp-quotes',
+			array( $this, 'render_quotes_page' )
+		);
 		
 		add_submenu_page(
 			'dw-whatsapp',
@@ -834,6 +843,178 @@ class DW_WhatsApp_Admin {
 			});
 		});
 		</script>
+		<?php
+	}
+
+	/**
+	 * Render quotes page
+	 */
+	public function render_quotes_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Você não tem permissão para acessar esta página.', 'dw-whatsapp' ) );
+		}
+
+		// Handle delete
+		if ( isset( $_GET['action'] ) && $_GET['action'] === 'delete' && isset( $_GET['quote_id'] ) ) {
+			check_admin_referer( 'delete_quote_' . $_GET['quote_id'] );
+			DW_WhatsApp_Quotes::delete_quote( absint( $_GET['quote_id'] ) );
+			echo '<div class="notice notice-success is-dismissible"><p>Cotação excluída com sucesso!</p></div>';
+		}
+
+		$per_page = 20;
+		$current_page = isset( $_GET['paged'] ) ? absint( $_GET['paged'] ) : 1;
+		$search = isset( $_GET['s'] ) ? sanitize_text_field( $_GET['s'] ) : '';
+
+		$args = array(
+			'per_page' => $per_page,
+			'page'     => $current_page,
+			'search'   => $search,
+		);
+
+		$quotes = DW_WhatsApp_Quotes::get_quotes( $args );
+		$total = DW_WhatsApp_Quotes::get_total_quotes( $search );
+		$total_pages = ceil( $total / $per_page );
+
+		// View single quote
+		if ( isset( $_GET['action'] ) && $_GET['action'] === 'view' && isset( $_GET['quote_id'] ) ) {
+			$quote = DW_WhatsApp_Quotes::get_quote( absint( $_GET['quote_id'] ) );
+			?>
+			<div class="wrap">
+				<h1>Cotação #<?php echo esc_html( absint( $_GET['quote_id'] ) ); ?></h1>
+				<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=dw-whatsapp-quotes' ) ); ?>" class="button">&larr; Voltar</a></p>
+				<?php if ( empty( $quote ) ) : ?>
+					<div class="notice notice-error"><p>Cotação não encontrada.</p></div>
+				<?php else : ?>
+					<?php
+					$cart = json_decode( $quote['cart_contents'] ?? '', true );
+					$totals = json_decode( $quote['totals'] ?? '', true );
+					?>
+					<table class="widefat striped" style="max-width: 900px;">
+						<tbody>
+							<tr><th style="width: 220px;">Data</th><td><?php echo esc_html( $quote['created_at'] ?? '-' ); ?></td></tr>
+							<tr><th>Cliente</th><td><?php echo esc_html( $quote['customer_name'] ?: '-' ); ?></td></tr>
+							<tr><th>E-mail</th><td><?php echo esc_html( $quote['customer_email'] ?: '-' ); ?></td></tr>
+							<tr><th>Telefone</th><td><?php echo esc_html( $quote['customer_phone'] ?: '-' ); ?></td></tr>
+							<tr><th>Moeda</th><td><?php echo esc_html( $quote['currency'] ?: '-' ); ?></td></tr>
+							<tr><th>IP</th><td><?php echo esc_html( $quote['ip'] ?: '-' ); ?></td></tr>
+						</tbody>
+					</table>
+
+					<h2 style="margin-top: 25px;">Itens</h2>
+					<table class="widefat striped" style="max-width: 900px;">
+						<thead>
+							<tr>
+								<th>Produto</th>
+								<th style="width: 90px;">Qtd</th>
+								<th style="width: 140px;">Total</th>
+							</tr>
+						</thead>
+						<tbody>
+							<?php if ( empty( $cart['items'] ) ) : ?>
+								<tr><td colspan="3">—</td></tr>
+							<?php else : ?>
+								<?php foreach ( $cart['items'] as $item ) : ?>
+									<tr>
+										<td><?php echo esc_html( $item['name'] ?? '-' ); ?></td>
+										<td><?php echo esc_html( $item['qty'] ?? 0 ); ?></td>
+										<td><?php echo esc_html( $item['line_total'] ?? '-' ); ?></td>
+									</tr>
+								<?php endforeach; ?>
+							<?php endif; ?>
+						</tbody>
+					</table>
+
+					<h2 style="margin-top: 25px;">Totais</h2>
+					<table class="widefat striped" style="max-width: 900px;">
+						<tbody>
+							<tr><th style="width: 220px;">Subtotal</th><td><?php echo esc_html( $totals['subtotal'] ?? '-' ); ?></td></tr>
+							<tr><th>Frete</th><td><?php echo esc_html( $totals['shipping'] ?? '-' ); ?></td></tr>
+							<tr><th>Descontos</th><td><?php echo esc_html( $totals['discount'] ?? '-' ); ?></td></tr>
+							<tr><th>Total</th><td><strong><?php echo esc_html( $totals['total'] ?? '-' ); ?></strong></td></tr>
+						</tbody>
+					</table>
+				<?php endif; ?>
+			</div>
+			<?php
+			return;
+		}
+
+		?>
+		<div class="wrap">
+			<h1>Cotações (Carrinho via WhatsApp)</h1>
+
+			<div style="margin: 20px 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+				<form method="get" style="flex: 1; min-width: 300px;">
+					<input type="hidden" name="page" value="dw-whatsapp-quotes">
+					<p class="search-box" style="margin: 0;">
+						<label class="screen-reader-text" for="quote-search-input">Buscar cotações:</label>
+						<input type="search" id="quote-search-input" name="s" value="<?php echo esc_attr( $search ); ?>" placeholder="Buscar por nome, e-mail ou telefone..." style="width: 300px;">
+						<input type="submit" class="button" value="Buscar">
+						<?php if ( $search ) : ?>
+							<a href="<?php echo esc_url( admin_url( 'admin.php?page=dw-whatsapp-quotes' ) ); ?>" class="button">Limpar</a>
+						<?php endif; ?>
+					</p>
+				</form>
+				<div class="alignleft actions">
+					<span class="displaying-num"><?php echo esc_html( $total ); ?> cotação(ões)</span>
+				</div>
+			</div>
+
+			<?php if ( $total_pages > 1 ) : ?>
+				<div class="tablenav top">
+					<div class="tablenav-pages">
+						<?php
+						echo paginate_links( array(
+							'base'      => add_query_arg( 'paged', '%#%' ),
+							'format'    => '',
+							'prev_text' => '&laquo;',
+							'next_text' => '&raquo;',
+							'total'     => $total_pages,
+							'current'   => $current_page,
+						) );
+						?>
+					</div>
+				</div>
+			<?php endif; ?>
+
+			<table class="wp-list-table widefat fixed striped">
+				<thead>
+					<tr>
+						<th style="width: 70px;">ID</th>
+						<th>Cliente</th>
+						<th>E-mail</th>
+						<th>Telefone</th>
+						<th style="width: 170px;">Data</th>
+						<th style="width: 140px;">Total</th>
+						<th style="width: 170px;">Ações</th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php if ( empty( $quotes ) ) : ?>
+						<tr><td colspan="7" style="text-align:center; padding: 30px;">Nenhuma cotação encontrada.</td></tr>
+					<?php else : ?>
+						<?php foreach ( $quotes as $q ) : ?>
+							<?php
+							$totals = json_decode( $q['totals'] ?? '', true );
+							$total_txt = is_array( $totals ) && ! empty( $totals['total'] ) ? $totals['total'] : '-';
+							?>
+							<tr>
+								<td><?php echo esc_html( $q['id'] ); ?></td>
+								<td><strong><?php echo esc_html( $q['customer_name'] ?: '-' ); ?></strong></td>
+								<td><?php echo esc_html( $q['customer_email'] ?: '-' ); ?></td>
+								<td><?php echo esc_html( $q['customer_phone'] ?: '-' ); ?></td>
+								<td><?php echo esc_html( $q['created_at'] ?? '-' ); ?></td>
+								<td><?php echo esc_html( $total_txt ); ?></td>
+								<td>
+									<a class="button button-small" href="<?php echo esc_url( admin_url( 'admin.php?page=dw-whatsapp-quotes&action=view&quote_id=' . absint( $q['id'] ) ) ); ?>">Ver</a>
+									<a class="button button-small" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=dw-whatsapp-quotes&action=delete&quote_id=' . absint( $q['id'] ) ), 'delete_quote_' . absint( $q['id'] ) ) ); ?>" onclick="return confirm('Tem certeza que deseja excluir esta cotação?');">Excluir</a>
+								</td>
+							</tr>
+						<?php endforeach; ?>
+					<?php endif; ?>
+				</tbody>
+			</table>
+		</div>
 		<?php
 	}
 

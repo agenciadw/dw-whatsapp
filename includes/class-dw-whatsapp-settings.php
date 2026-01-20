@@ -125,6 +125,12 @@ class DW_WhatsApp_Settings {
 			'contact_capture_required'   => array( 'name' ),
 			'contact_capture_title'      => 'Antes de continuar',
 			'contact_capture_subtitle'   => 'Por favor, preencha seus dados para que possamos atendê-lo melhor:',
+
+			// Checkout via WhatsApp (Carrinho)
+			'enable_whatsapp_checkout'         => 'no',
+			'show_default_checkout_button'     => 'yes',
+			'whatsapp_checkout_button_text'    => 'Finalizar compra pelo WhatsApp',
+			'whatsapp_checkout_message'        => "Olá! Gostaria de finalizar minha compra via WhatsApp.\n\nCotação #{quote_id}\n\nItens:\n\n{cart_items}\n\nSubtotal: {subtotal}\nFrete: {shipping}\nDescontos: {discount}\nTotal: {total}",
 		);
 	}
 
@@ -148,6 +154,8 @@ class DW_WhatsApp_Settings {
 		$sanitized['include_variations']     = ! empty( $input['include_variations'] ) ? 'yes' : 'no';
 		$sanitized['multi_users_enabled']    = ! empty( $input['multi_users_enabled'] ) ? 'yes' : 'no';
 		$sanitized['enable_contact_capture'] = ! empty( $input['enable_contact_capture'] ) ? 'yes' : 'no';
+		$sanitized['enable_whatsapp_checkout'] = ! empty( $input['enable_whatsapp_checkout'] ) ? 'yes' : 'no';
+		$sanitized['show_default_checkout_button'] = ! empty( $input['show_default_checkout_button'] ) ? 'yes' : 'no';
 
 		// Position
 		$allowed_positions = array( 'bottom-right', 'bottom-left', 'top-right', 'top-left' );
@@ -194,6 +202,8 @@ class DW_WhatsApp_Settings {
 		$sanitized['chat_widget_availability']   = isset( $input['chat_widget_availability'] ) ? sanitize_text_field( $input['chat_widget_availability'] ) : '';
 		$sanitized['contact_capture_title']      = isset( $input['contact_capture_title'] ) ? sanitize_text_field( $input['contact_capture_title'] ) : '';
 		$sanitized['contact_capture_subtitle']   = isset( $input['contact_capture_subtitle'] ) ? sanitize_text_field( $input['contact_capture_subtitle'] ) : '';
+		$sanitized['whatsapp_checkout_button_text'] = isset( $input['whatsapp_checkout_button_text'] ) ? sanitize_text_field( $input['whatsapp_checkout_button_text'] ) : '';
+		$sanitized['whatsapp_checkout_message'] = isset( $input['whatsapp_checkout_message'] ) ? wp_kses_post( $input['whatsapp_checkout_message'] ) : '';
 
 		// Color
 		$sanitized['button_color'] = isset( $input['button_color'] ) ? sanitize_hex_color( $input['button_color'] ) : '#25d366';

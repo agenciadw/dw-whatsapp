@@ -203,6 +203,11 @@ GPL v2 ou posterior - https://www.gnu.org/licenses/gpl-2.0.html
 
 ## 🔄 Changelog
 
+### Versão 2.1.0 - 20-01-2026
+- 🛒 **Finalizar venda via WhatsApp (Carrinho)**: Botão no carrinho para enviar itens e totais ao WhatsApp e salvar uma cotação no admin.
+- 🧾 **Cotações no admin**: Nova página “Cotações” para listar e visualizar cotações geradas.
+- ✍️ **Mensagem melhor formatada**: Quebras de linha e moeda sem HTML/entities (com fallback).
+
 ### Versão 2.0.2 - 17-01-2026
 - 🗓️ **Compatibilidade com WooCommerce Bookings**: Produtos Booking não entram mais na regra de “produto sem preço”, preservando calendário e cálculo por pessoas.
 
