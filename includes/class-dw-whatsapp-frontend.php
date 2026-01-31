@@ -1615,6 +1615,7 @@ class DW_WhatsApp_Frontend {
 			const btnSubmit = document.getElementById('dw-contact-btn-submit');
 			const form = document.getElementById('dw-contact-form');
 			let pendingWhatsAppUrl = '';
+			let leadMeta = { origin: '', origin_source: '', landing_url: '', referrer: '' };
 			const hasRequired = <?php echo $has_required ? 'true' : 'false'; ?>;
 			
 			// Custom fields configuration
@@ -1628,6 +1629,71 @@ class DW_WhatsApp_Frontend {
 				}
 				echo json_encode( $fields_config );
 			?>;
+
+			function getHostname(url) {
+				try {
+					return (new URL(url)).hostname.toLowerCase();
+				} catch (e) {
+					return '';
+				}
+			}
+
+			function detectLeadOrigin() {
+				const landingUrl = window.location.href || '';
+				const referrer = document.referrer || '';
+				let origin = '';
+				let originSource = '';
+				let originCampaign = '';
+				let originCampaignId = '';
+
+				try {
+					const urlObj = new URL(landingUrl);
+					const params = urlObj.searchParams;
+
+					const utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+					const clickIdKeys = ['gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'ttclid'];
+
+					const hasUtm = utmKeys.some(k => params.get(k));
+					const hasClickId = clickIdKeys.some(k => params.get(k));
+
+					if (hasUtm || hasClickId) {
+						origin = 'campanha';
+						originSource = params.get('utm_source') || '';
+						originCampaign = params.get('utm_campaign') || '';
+						originCampaignId = params.get('gad_campaignid') || '';
+
+						if (!originSource) {
+							if (params.get('gclid') || params.get('gbraid') || params.get('wbraid') || params.get('gad_campaignid')) originSource = 'google_ads';
+							else if (params.get('fbclid')) originSource = 'facebook_ads';
+							else if (params.get('msclkid')) originSource = 'microsoft_ads';
+							else if (params.get('ttclid')) originSource = 'tiktok_ads';
+						}
+					}
+				} catch (e) {
+					// noop
+				}
+
+				if (!origin) {
+					const refHost = getHostname(referrer);
+					if (!refHost) {
+						origin = 'direto';
+					} else {
+						const isSearch = ['google.', 'bing.com', 'yahoo.', 'duckduckgo.com', 'yandex.', 'baidu.com'].some(h => refHost.includes(h));
+						const isSocial = [
+							'facebook.com', 'm.facebook.com', 'l.facebook.com',
+							'instagram.com', 'l.instagram.com',
+							't.co', 'twitter.com', 'x.com',
+							'linkedin.com', 'pinterest.', 'tiktok.com'
+						].some(h => refHost.includes(h));
+
+						if (isSearch) origin = 'pesquisa';
+						else if (isSocial) origin = 'social';
+						else origin = 'referencia';
+					}
+				}
+
+				return { origin, origin_source: originSource, origin_campaign: originCampaign, origin_campaign_id: originCampaignId, landing_url: landingUrl, referrer };
+			}
 
 			// Interceptar todos os cliques em links do WhatsApp
 			document.addEventListener('click', function(e) {
@@ -1653,6 +1719,7 @@ class DW_WhatsApp_Frontend {
 						e.preventDefault();
 						e.stopPropagation();
 						pendingWhatsAppUrl = whatsappUrl;
+						leadMeta = detectLeadOrigin();
 						openModal();
 						return false;
 					}
@@ -1734,6 +1801,12 @@ class DW_WhatsApp_Frontend {
 				// Remover máscara do telefone antes de enviar
 				const phoneClean = (contactData.phone || '').replace(/\D/g, '');
 				formData.append('phone', phoneClean);
+				formData.append('origin', (leadMeta && leadMeta.origin) ? leadMeta.origin : '');
+				formData.append('origin_source', (leadMeta && leadMeta.origin_source) ? leadMeta.origin_source : '');
+				formData.append('origin_campaign', (leadMeta && leadMeta.origin_campaign) ? leadMeta.origin_campaign : '');
+				formData.append('origin_campaign_id', (leadMeta && leadMeta.origin_campaign_id) ? leadMeta.origin_campaign_id : '');
+				formData.append('landing_url', (leadMeta && leadMeta.landing_url) ? leadMeta.landing_url : '');
+				formData.append('referrer', (leadMeta && leadMeta.referrer) ? leadMeta.referrer : '');
 				
 				// Adicionar campos customizados
 				Object.keys(contactData).forEach(key => {
@@ -1770,6 +1843,10 @@ class DW_WhatsApp_Frontend {
 					'name': nome || '',
 					'email': email || '',
 					'phone': telefone || '',
+					'origin': (leadMeta && leadMeta.origin) ? leadMeta.origin : '',
+					'origin_source': (leadMeta && leadMeta.origin_source) ? leadMeta.origin_source : '',
+					'origin_campaign': (leadMeta && leadMeta.origin_campaign) ? leadMeta.origin_campaign : '',
+					'origin_campaign_id': (leadMeta && leadMeta.origin_campaign_id) ? leadMeta.origin_campaign_id : '',
 					'timestamp': new Date().toISOString(),
 					'widget_version': '1.0'
 				};

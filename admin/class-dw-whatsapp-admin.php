@@ -193,6 +193,35 @@ class DW_WhatsApp_Admin {
 		$name = isset( $_POST['name'] ) ? sanitize_text_field( $_POST['name'] ) : '';
 		$email = isset( $_POST['email'] ) ? sanitize_email( $_POST['email'] ) : '';
 		$phone = isset( $_POST['phone'] ) ? sanitize_text_field( $_POST['phone'] ) : '';
+		$origin = isset( $_POST['origin'] ) ? sanitize_text_field( $_POST['origin'] ) : '';
+		$origin_source = isset( $_POST['origin_source'] ) ? sanitize_text_field( $_POST['origin_source'] ) : '';
+		$origin_campaign = isset( $_POST['origin_campaign'] ) ? sanitize_text_field( $_POST['origin_campaign'] ) : '';
+		$origin_campaign_id = isset( $_POST['origin_campaign_id'] ) ? sanitize_text_field( $_POST['origin_campaign_id'] ) : '';
+		$landing_url = isset( $_POST['landing_url'] ) ? esc_url_raw( wp_unslash( $_POST['landing_url'] ) ) : '';
+		$referrer = isset( $_POST['referrer'] ) ? esc_url_raw( wp_unslash( $_POST['referrer'] ) ) : '';
+
+		// Fallback: inferir origem pelo referer (normalmente é a URL da página com UTM)
+		if ( $origin === '' ) {
+			$http_referer = isset( $_SERVER['HTTP_REFERER'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : '';
+			$base_url = $landing_url !== '' ? $landing_url : $http_referer;
+			$origin = $this->infer_lead_origin( $base_url, $referrer );
+		}
+		if ( $origin_source === '' && $origin === 'campanha' ) {
+			$http_referer = isset( $_SERVER['HTTP_REFERER'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : '';
+			$base_url = $landing_url !== '' ? $landing_url : $http_referer;
+			$origin_source = $this->infer_campaign_source( $base_url );
+		}
+		if ( $origin === 'campanha' && ( $origin_campaign === '' || $origin_campaign_id === '' ) ) {
+			$http_referer = isset( $_SERVER['HTTP_REFERER'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : '';
+			$base_url = $landing_url !== '' ? $landing_url : $http_referer;
+			$campaign = $this->infer_campaign_details( $base_url );
+			if ( $origin_campaign === '' ) {
+				$origin_campaign = $campaign['campaign'] ?? '';
+			}
+			if ( $origin_campaign_id === '' ) {
+				$origin_campaign_id = $campaign['campaign_id'] ?? '';
+			}
+		}
 
 		// Verificar se é cliente WooCommerce
 		$is_customer = 0;
@@ -210,6 +239,10 @@ class DW_WhatsApp_Admin {
 			'name'         => $name,
 			'email'        => $email,
 			'phone'        => $phone,
+			'origin'       => $origin,
+			'origin_source'=> $origin_source,
+			'origin_campaign' => $origin_campaign,
+			'origin_campaign_id' => $origin_campaign_id,
 			'is_customer'  => $is_customer,
 			'customer_id'  => $customer_id,
 		);
@@ -270,6 +303,234 @@ class DW_WhatsApp_Admin {
 		}
 		
 		return $phone;
+	}
+
+	/**
+	 * Formata a origem para exibição
+	 *
+	 * @param string $origin Origem bruta.
+	 * @return string
+	 */
+	private function format_origin( $origin, $origin_source = '', $origin_campaign = '', $origin_campaign_id = '' ) {
+		$origin = strtolower( trim( (string) $origin ) );
+		$origin_source = strtolower( trim( (string) $origin_source ) );
+		$origin_campaign = trim( (string) $origin_campaign );
+		$origin_campaign_id = trim( (string) $origin_campaign_id );
+		if ( $origin === '' ) {
+			return '-';
+		}
+		$map = array(
+			'campanha'   => 'Campanha',
+			'pesquisa'   => 'Pesquisa',
+			'direto'     => 'Direto',
+			'social'     => 'Social',
+			'referencia' => 'Referência',
+		);
+		$label = isset( $map[ $origin ] ) ? $map[ $origin ] : ucfirst( $origin );
+		if ( $origin === 'campanha' && $origin_source !== '' ) {
+			$label .= ' (' . $this->format_origin_source( $origin_source ) . ')';
+		}
+		if ( $origin === 'campanha' ) {
+			if ( $origin_campaign !== '' ) {
+				$label .= ' — ' . $origin_campaign;
+			} elseif ( $origin_campaign_id !== '' ) {
+				$label .= ' — ID ' . $origin_campaign_id;
+			}
+		}
+		return $label;
+	}
+
+	/**
+	 * Formata a fonte da campanha para exibição
+	 *
+	 * @param string $origin_source Fonte (ex.: google_ads).
+	 * @return string
+	 */
+	private function format_origin_source( $origin_source ) {
+		$origin_source = strtolower( trim( (string) $origin_source ) );
+		if ( $origin_source === '' ) {
+			return '';
+		}
+		$map = array(
+			'google_ads'    => 'Google Ads',
+			'microsoft_ads' => 'Microsoft Ads',
+			'facebook_ads'  => 'Facebook Ads',
+			'tiktok_ads'    => 'TikTok Ads',
+		);
+		if ( isset( $map[ $origin_source ] ) ) {
+			return $map[ $origin_source ];
+		}
+		// Se for um utm_source literal, exibir "Bonito"
+		return ucwords( str_replace( array( '-', '_' ), ' ', $origin_source ) );
+	}
+
+	/**
+	 * Infere a origem do lead a partir de URL (com UTM) e/ou referrer.
+	 *
+	 * @param string $landing_url URL atual (idealmente com query string).
+	 * @param string $referrer Referrer (opcional).
+	 * @return string campanha|pesquisa|direto|social|referencia
+	 */
+	private function infer_lead_origin( $landing_url, $referrer = '' ) {
+		$landing_url = (string) $landing_url;
+		$referrer = (string) $referrer;
+
+		$query = '';
+		$parts = wp_parse_url( $landing_url );
+		if ( is_array( $parts ) && ! empty( $parts['query'] ) ) {
+			$query = (string) $parts['query'];
+		}
+
+		$params = array();
+		if ( $query !== '' ) {
+			parse_str( $query, $params );
+		}
+
+		$has_utm = false;
+		foreach ( array( 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content' ) as $k ) {
+			if ( ! empty( $params[ $k ] ) ) {
+				$has_utm = true;
+				break;
+			}
+		}
+
+		$has_click_id = false;
+		foreach ( array( 'gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'ttclid' ) as $k ) {
+			if ( ! empty( $params[ $k ] ) ) {
+				$has_click_id = true;
+				break;
+			}
+		}
+
+		if ( $has_utm || $has_click_id ) {
+			return 'campanha';
+		}
+
+		$ref_host = '';
+		if ( $referrer !== '' ) {
+			$rparts = wp_parse_url( $referrer );
+			if ( is_array( $rparts ) && ! empty( $rparts['host'] ) ) {
+				$ref_host = strtolower( (string) $rparts['host'] );
+			}
+		}
+
+		// Se referrer não foi informado, tentamos inferir do próprio landing_url (não dá),
+		// então consideramos "direto".
+		if ( $ref_host === '' ) {
+			return 'direto';
+		}
+
+		$search_hosts = array(
+			'google.', 'bing.com', 'yahoo.', 'duckduckgo.com', 'yandex.', 'baidu.com',
+		);
+		foreach ( $search_hosts as $h ) {
+			if ( strpos( $ref_host, $h ) !== false ) {
+				return 'pesquisa';
+			}
+		}
+
+		$social_hosts = array(
+			'facebook.com', 'm.facebook.com', 'l.facebook.com',
+			'instagram.com', 'l.instagram.com',
+			't.co', 'twitter.com', 'x.com',
+			'linkedin.com', 'pinterest.', 'tiktok.com',
+		);
+		foreach ( $social_hosts as $h ) {
+			if ( strpos( $ref_host, $h ) !== false ) {
+				return 'social';
+			}
+		}
+
+		return 'referencia';
+	}
+
+	/**
+	 * Infere a fonte da campanha.
+	 * Prioridade:
+	 * - utm_source
+	 * - click IDs (gclid/gbraid/wbraid -> google_ads, fbclid -> facebook_ads, msclkid -> microsoft_ads, ttclid -> tiktok_ads)
+	 *
+	 * @param string $landing_url URL atual (idealmente com query string).
+	 * @return string
+	 */
+	private function infer_campaign_source( $landing_url ) {
+		$landing_url = (string) $landing_url;
+
+		$query = '';
+		$parts = wp_parse_url( $landing_url );
+		if ( is_array( $parts ) && ! empty( $parts['query'] ) ) {
+			$query = (string) $parts['query'];
+		}
+
+		$params = array();
+		if ( $query !== '' ) {
+			parse_str( $query, $params );
+		}
+
+		if ( ! empty( $params['utm_source'] ) ) {
+			return sanitize_text_field( (string) $params['utm_source'] );
+		}
+
+		// Google Ads
+		foreach ( array( 'gclid', 'gbraid', 'wbraid', 'gad_campaignid' ) as $k ) {
+			if ( ! empty( $params[ $k ] ) ) {
+				return 'google_ads';
+			}
+		}
+		// Meta Ads
+		if ( ! empty( $params['fbclid'] ) ) {
+			return 'facebook_ads';
+		}
+		// Microsoft Ads
+		if ( ! empty( $params['msclkid'] ) ) {
+			return 'microsoft_ads';
+		}
+		// TikTok Ads
+		if ( ! empty( $params['ttclid'] ) ) {
+			return 'tiktok_ads';
+		}
+
+		return '';
+	}
+
+	/**
+	 * Extrai nome/ID de campanha do landing URL.
+	 * - Nome: utm_campaign
+	 * - ID: gad_campaignid (Google Ads) ou outros quando fizer sentido
+	 *
+	 * @param string $landing_url URL com query string.
+	 * @return array{campaign:string,campaign_id:string}
+	 */
+	private function infer_campaign_details( $landing_url ) {
+		$landing_url = (string) $landing_url;
+
+		$query = '';
+		$parts = wp_parse_url( $landing_url );
+		if ( is_array( $parts ) && ! empty( $parts['query'] ) ) {
+			$query = (string) $parts['query'];
+		}
+
+		$params = array();
+		if ( $query !== '' ) {
+			parse_str( $query, $params );
+		}
+
+		$campaign = '';
+		$campaign_id = '';
+
+		if ( ! empty( $params['utm_campaign'] ) ) {
+			$campaign = sanitize_text_field( (string) $params['utm_campaign'] );
+		}
+
+		// Google Ads: alguns sites usam gad_campaignid (como no seu exemplo)
+		if ( ! empty( $params['gad_campaignid'] ) ) {
+			$campaign_id = sanitize_text_field( (string) $params['gad_campaignid'] );
+		}
+
+		return array(
+			'campaign'    => $campaign,
+			'campaign_id' => $campaign_id,
+		);
 	}
 
 	/**
@@ -371,6 +632,10 @@ class DW_WhatsApp_Admin {
 								Telefone
 								<span class="dw-resize-handle"></span>
 							</th>
+							<th style="width: 120px; position: relative;">
+								Origem
+								<span class="dw-resize-handle"></span>
+							</th>
 							<th style="width: 100px; position: relative;">
 								Contatos
 								<span class="dw-resize-handle"></span>
@@ -392,7 +657,7 @@ class DW_WhatsApp_Admin {
 				<tbody>
 					<?php if ( empty( $leads ) ) : ?>
 						<tr>
-							<td colspan="8" style="text-align: center; padding: 40px;">
+							<td colspan="9" style="text-align: center; padding: 40px;">
 								<p>Nenhum lead encontrado.</p>
 							</td>
 						</tr>
@@ -403,6 +668,7 @@ class DW_WhatsApp_Admin {
 								<td data-label="Nome"><strong><?php echo esc_html( $lead['name'] ?: '-' ); ?></strong></td>
 								<td data-label="E-mail"><?php echo esc_html( $lead['email'] ?: '-' ); ?></td>
 								<td data-label="Telefone"><?php echo esc_html( $this->format_phone( $lead['phone'] ?? '' ) ); ?></td>
+								<td data-label="Origem"><?php echo esc_html( $this->format_origin( $lead['origin'] ?? '', $lead['origin_source'] ?? '', $lead['origin_campaign'] ?? '', $lead['origin_campaign_id'] ?? '' ) ); ?></td>
 								<td data-label="Contatos">
 									<span style="background: #25d366; color: white; padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 13px;">
 										<?php echo esc_html( $lead['contact_count'] ?? 1 ); ?>
@@ -778,6 +1044,11 @@ class DW_WhatsApp_Admin {
 							html += '<div class="dw-lead-detail-label">Telefone:</div>';
 							html += '<div class="dw-lead-detail-value">' + (lead.phone || '-') + '</div>';
 							html += '</div>';
+
+							html += '<div class="dw-lead-detail-row">';
+							html += '<div class="dw-lead-detail-label">Origem:</div>';
+							html += '<div class="dw-lead-detail-value">' + (lead.origin || '-') + '</div>';
+							html += '</div>';
 							
 							html += '<div class="dw-lead-detail-row">';
 							html += '<div class="dw-lead-detail-label">Total de Contatos:</div>';
@@ -1058,6 +1329,7 @@ class DW_WhatsApp_Admin {
 			'Nome',
 			'E-mail',
 			'Telefone',
+			'Origem',
 			'Contatos',
 			'É Cliente',
 			'ID Cliente',
@@ -1110,6 +1382,8 @@ class DW_WhatsApp_Admin {
 				echo '<Cell><Data ss:Type="String">' . esc_html( $lead['email'] ?: '-' ) . '</Data></Cell>' . "\n";
 				// Telefone
 				echo '<Cell><Data ss:Type="String">' . esc_html( $this->format_phone( $lead['phone'] ?? '' ) ) . '</Data></Cell>' . "\n";
+				// Origem
+				echo '<Cell><Data ss:Type="String">' . esc_html( $this->format_origin( $lead['origin'] ?? '', $lead['origin_source'] ?? '', $lead['origin_campaign'] ?? '', $lead['origin_campaign_id'] ?? '' ) ) . '</Data></Cell>' . "\n";
 				// Contatos
 				echo '<Cell><Data ss:Type="Number">' . esc_html( $lead['contact_count'] ?? 1 ) . '</Data></Cell>' . "\n";
 				// É Cliente
@@ -1161,6 +1435,7 @@ class DW_WhatsApp_Admin {
 					$lead['name'] ?: '-',
 					$lead['email'] ?: '-',
 					$this->format_phone( $lead['phone'] ?? '' ),
+					$this->format_origin( $lead['origin'] ?? '', $lead['origin_source'] ?? '', $lead['origin_campaign'] ?? '', $lead['origin_campaign_id'] ?? '' ),
 					$lead['contact_count'] ?? 1,
 					$lead['is_customer'] ? 'Sim' : 'Não',
 					$lead['customer_id'] ?: '-',
@@ -1310,6 +1585,7 @@ class DW_WhatsApp_Admin {
 			'name' => $lead_data['name'] ?? '-',
 			'email' => $lead_data['email'] ?? '-',
 			'phone' => $this->format_phone( $lead_data['phone'] ?? '' ),
+			'origin' => $this->format_origin( $lead_data['origin'] ?? '', $lead_data['origin_source'] ?? '', $lead_data['origin_campaign'] ?? '', $lead_data['origin_campaign_id'] ?? '' ),
 			'contact_count' => $lead_data['contact_count'] ?? 1,
 			'is_customer' => ! empty( $lead_data['is_customer'] ),
 			'customer_id' => $lead_data['customer_id'] ?? null,
